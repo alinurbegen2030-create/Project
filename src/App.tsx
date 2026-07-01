@@ -5,7 +5,12 @@ import { supabase } from './lib/supabase';
 
 type SupportedUiLanguage = 'ru' | 'kk' | 'en';
 type DesignTheme = 'neon' | 'arena' | 'pixel';
-type AppPage = 'home' | 'matches' | 'profile' | 'chats';
+type AppPage = 'home' | 'matches' | 'profile' | 'chats' | 'reviews';
+
+type UserVisualProfile = {
+  displayName: string;
+  icon: string;
+};
 
 type Player = {
   id: string;
@@ -104,6 +109,30 @@ type TeamupMessageRow = {
   author_email: string;
   body: string;
   created_at: string;
+};
+
+type SiteReview = {
+  id: string;
+  authorId?: string | null;
+  authorName: string;
+  rating: number;
+  body: string;
+  createdAt: string;
+};
+
+type TeamupReviewRow = {
+  id: string;
+  author_id?: string | null;
+  author_name: string;
+  rating: number;
+  body: string;
+  created_at: string;
+};
+
+type TeamupUserSettingsRow = {
+  user_id: string;
+  display_name: string;
+  icon: string;
 };
 
 const text: Record<SupportedUiLanguage, Record<string, string>> = {
@@ -430,6 +459,96 @@ const eventText: Record<SupportedUiLanguage, Record<string, string>> = {
     eventBy: 'Created by',
     joinEvent: 'Write in chat',
     eventSaved: 'Event added.',
+  },
+};
+
+const uiCopy: Record<SupportedUiLanguage, Record<string, string>> = {
+  ru: {
+    navHome: 'Начальная',
+    navMatches: 'Найти напарников',
+    navProfile: 'Анкета',
+    navChats: 'Чаты',
+    navReviews: 'Отзывы',
+    languageInputPlaceholder: 'Русский, Қазақша, English...',
+    statGames: '200+ игр',
+    statProfiles: 'Живые анкеты',
+    statChat: 'Чат внутри сайта',
+    guideTitle: 'Как пользоваться TeamUp',
+    guideStep1: 'Войди или зарегистрируйся по имени.',
+    guideStep2: 'Заполни анкету: игра, возраст, язык, микрофон и контакты.',
+    guideStep3: 'Открой поиск и найди подходящего напарника.',
+    guideStep4: 'Добавь игрока в контакты или напиши ему в чат.',
+    chatsTitle: 'Чаты',
+    emptyChats: 'Пока нет чатов. Открой анкету игрока и напиши первое сообщение.',
+    profileDeleted: 'Анкета удалена.',
+    reviewsTitle: 'Отзывы сайта',
+    reviewRating: 'Оценка',
+    reviewText: 'Отзыв',
+    reviewPlaceholder: 'Напиши, что понравилось или что надо улучшить',
+    publishReview: 'Оставить отзыв',
+    emptyReviews: 'Пока нет отзывов. Будь первым.',
+    reviewSaved: 'Отзыв опубликован.',
+    deleteReview: 'Удалить отзыв',
+    reviewDeleted: 'Отзыв удалён.',
+    you: 'Ты',
+  },
+  kk: {
+    navHome: 'Басты бет',
+    navMatches: 'Серіктес табу',
+    navProfile: 'Сауалнама',
+    navChats: 'Чаттар',
+    navReviews: 'Пікірлер',
+    languageInputPlaceholder: 'Русский, Қазақша, English...',
+    statGames: '200+ ойын',
+    statProfiles: 'Нақты сауалнамалар',
+    statChat: 'Сайт ішіндегі чат',
+    guideTitle: 'TeamUp қалай қолданылады',
+    guideStep1: 'Атыңмен кір немесе тіркел.',
+    guideStep2: 'Сауалнаманы толтыр: ойын, жас, тіл, микрофон және контакт.',
+    guideStep3: 'Іздеуді ашып, лайық серіктес тап.',
+    guideStep4: 'Ойыншыны контактіге қос немесе чатқа жаз.',
+    chatsTitle: 'Чаттар',
+    emptyChats: 'Әзірге чат жоқ. Ойыншы сауалнамасын ашып, бірінші хабарлама жаз.',
+    profileDeleted: 'Сауалнама өшірілді.',
+    reviewsTitle: 'Сайт пікірлері',
+    reviewRating: 'Баға',
+    reviewText: 'Пікір',
+    reviewPlaceholder: 'Не ұнады немесе нені жақсарту керек екенін жаз',
+    publishReview: 'Пікір қалдыру',
+    emptyReviews: 'Әзірге пікір жоқ. Бірінші бол.',
+    reviewSaved: 'Пікір жарияланды.',
+    deleteReview: 'Пікірді өшіру',
+    reviewDeleted: 'Пікір өшірілді.',
+    you: 'Сен',
+  },
+  en: {
+    navHome: 'Home',
+    navMatches: 'Find teammates',
+    navProfile: 'Profile',
+    navChats: 'Chats',
+    navReviews: 'Reviews',
+    languageInputPlaceholder: 'Russian, Kazakh, English...',
+    statGames: '200+ games',
+    statProfiles: 'Real profiles',
+    statChat: 'Built-in chat',
+    guideTitle: 'How to use TeamUp',
+    guideStep1: 'Sign in or create an account with a name.',
+    guideStep2: 'Fill out your profile: game, age, language, mic, and contacts.',
+    guideStep3: 'Open search and find a teammate who fits.',
+    guideStep4: 'Add the player to contacts or message them in chat.',
+    chatsTitle: 'Chats',
+    emptyChats: 'No chats yet. Open a player profile and write the first message.',
+    profileDeleted: 'Profile deleted.',
+    reviewsTitle: 'Site reviews',
+    reviewRating: 'Rating',
+    reviewText: 'Review',
+    reviewPlaceholder: 'Write what you liked or what should be improved',
+    publishReview: 'Post review',
+    emptyReviews: 'No reviews yet. Be the first one.',
+    reviewSaved: 'Review posted.',
+    deleteReview: 'Delete review',
+    reviewDeleted: 'Review deleted.',
+    you: 'You',
   },
 };
 
@@ -763,6 +882,9 @@ const modeOptions = ['Competitive', 'Premier', 'Survival', 'Zero Build', 'All Pi
 const STORAGE_KEY = 'teamup-real-player-profiles';
 const CONTACTS_KEY = 'teamup-contact-profile-ids';
 const MESSAGES_KEY = 'teamup-chat-messages';
+const REVIEWS_KEY = 'teamup-site-reviews';
+const USER_SETTINGS_KEY = 'teamup-user-visual-settings';
+const userIconOptions = ['TU', 'GG', 'XP', 'LV', 'HP', 'VR'];
 const profileColors = ['#e25555', '#2f9d68', '#e6a13d', '#6c63d9', '#3c7dd9', '#111827'];
 const designThemes: Array<{ id: DesignTheme; label: string }> = [
   { id: 'neon', label: 'Neon' },
@@ -914,6 +1036,37 @@ function getDisplayName(player: Player, anonymousLabel: string) {
   return player.anonymous ? anonymousLabel : player.name;
 }
 
+function defaultVisualProfile(user: User): UserVisualProfile {
+  return {
+    displayName: user.user_metadata?.name || user.user_metadata?.user_name || user.email?.split('@')[0] || 'player',
+    icon: userIconOptions[0],
+  };
+}
+
+function displayNameFromUser(user: User, visualProfile?: UserVisualProfile | null) {
+  return visualProfile?.displayName?.trim() || defaultVisualProfile(user).displayName;
+}
+
+function getStoredUserSettings(userId: string) {
+  const saved = localStorage.getItem(USER_SETTINGS_KEY);
+  if (!saved) return null;
+
+  try {
+    const settings = JSON.parse(saved) as Record<string, UserVisualProfile>;
+    return settings[userId] ?? null;
+  } catch {
+    localStorage.removeItem(USER_SETTINGS_KEY);
+    return null;
+  }
+}
+
+function storeUserSettings(userId: string, visualProfile: UserVisualProfile) {
+  const saved = localStorage.getItem(USER_SETTINGS_KEY);
+  const settings = saved ? (JSON.parse(saved) as Record<string, UserVisualProfile>) : {};
+  settings[userId] = visualProfile;
+  localStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
+}
+
 function profileMatchesSearch(player: Player, query: string) {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return true;
@@ -997,6 +1150,17 @@ function rowToMessage(row: TeamupMessageRow): ChatMessage {
   };
 }
 
+function rowToReview(row: TeamupReviewRow): SiteReview {
+  return {
+    id: row.id,
+    authorId: row.author_id ?? null,
+    authorName: row.author_name,
+    rating: row.rating,
+    body: row.body,
+    createdAt: row.created_at,
+  };
+}
+
 function parseChatBody(body: string) {
   if (!body.startsWith('> ')) return { body };
 
@@ -1050,6 +1214,7 @@ export default function App() {
   const [people, setPeople] = useState<Player[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
+  const [visualProfile, setVisualProfile] = useState<UserVisualProfile | null>(null);
   const [authNotice, setAuthNotice] = useState('');
   const [theme, setTheme] = useState<DesignTheme>('neon');
   const [activePage, setActivePage] = useState<AppPage>('home');
@@ -1059,6 +1224,10 @@ export default function App() {
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [allMessages, setAllMessages] = useState<ChatMessage[]>([]);
+  const [reviews, setReviews] = useState<SiteReview[]>([]);
+  const [reviewRating, setReviewRating] = useState('5');
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewMessage, setReviewMessage] = useState('');
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
   const [replyDrafts, setReplyDrafts] = useState<Record<string, ReplyTarget | undefined>>({});
   const [chatNotice, setChatNotice] = useState('');
@@ -1071,6 +1240,7 @@ export default function App() {
     ...contactText[activeUiLanguage],
     ...chatText[activeUiLanguage],
     ...eventText[activeUiLanguage],
+    ...uiCopy[activeUiLanguage],
   };
 
   useEffect(() => {
@@ -1085,10 +1255,47 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user && activePage === 'home') {
-      setActivePage('matches');
+    if (!user) {
+      setVisualProfile(null);
+      return;
     }
-  }, [activePage, user]);
+
+    const currentUser = user;
+
+    async function loadVisualProfile() {
+      const fallbackProfile = getStoredUserSettings(currentUser.id) ?? defaultVisualProfile(currentUser);
+
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('teamup_user_settings')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .limit(1);
+
+        if (!error && data?.[0]) {
+          const row = data[0] as TeamupUserSettingsRow;
+          const nextProfile = {
+            displayName: row.display_name,
+            icon: row.icon,
+          };
+          setVisualProfile(nextProfile);
+          storeUserSettings(currentUser.id, nextProfile);
+          return;
+        }
+      }
+
+      setVisualProfile(fallbackProfile);
+    }
+
+    loadVisualProfile();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user && activePage !== 'home') {
+      setActivePage('home');
+      setAuthNotice(t.loginRequired);
+    }
+  }, [activePage, t.loginRequired, user]);
 
   useEffect(() => {
     const savedContacts = localStorage.getItem(CONTACTS_KEY) ?? localStorage.getItem('teamup-favorite-profile-ids');
@@ -1135,6 +1342,33 @@ export default function App() {
     }
 
     loadAllMessages();
+  }, []);
+
+  useEffect(() => {
+    async function loadReviews() {
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('teamup_reviews')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          setReviews((data as TeamupReviewRow[]).map(rowToReview));
+          return;
+        }
+      }
+
+      const saved = localStorage.getItem(REVIEWS_KEY);
+      if (!saved) return;
+
+      try {
+        setReviews(JSON.parse(saved) as SiteReview[]);
+      } catch {
+        localStorage.removeItem(REVIEWS_KEY);
+      }
+    }
+
+    loadReviews();
   }, []);
 
   useEffect(() => {
@@ -1202,11 +1436,17 @@ export default function App() {
   const matches = useMemo(
     () =>
       people
+        .filter((player) => !user || player.ownerId !== user.id)
         .filter((player) => profileMatchesSearch(player, profileSearch))
         .filter((player) => !contactsOnly || contactIds.includes(player.id))
         .map((player) => ({ ...player, match: scorePlayer(player, profile) }))
         .sort((a, b) => b.match - a.match),
-    [contactIds, contactsOnly, people, profile, profileSearch],
+    [contactIds, contactsOnly, people, profile, profileSearch, user],
+  );
+
+  const myProfiles = useMemo(
+    () => (user ? people.filter((player) => player.ownerId === user.id) : []),
+    [people, user],
   );
 
   const chatSummaries = useMemo(() => {
@@ -1236,6 +1476,31 @@ export default function App() {
   function savePeopleLocally(nextPeople: Player[]) {
     setPeople(nextPeople);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextPeople));
+  }
+
+  function saveReviewsLocally(nextReviews: SiteReview[]) {
+    setReviews(nextReviews);
+    localStorage.setItem(REVIEWS_KEY, JSON.stringify(nextReviews));
+  }
+
+  async function saveVisualProfile(nextProfile: UserVisualProfile) {
+    if (!user) return;
+
+    const cleanProfile = {
+      displayName: nextProfile.displayName.trim() || defaultVisualProfile(user).displayName,
+      icon: userIconOptions.includes(nextProfile.icon) ? nextProfile.icon : userIconOptions[0],
+    };
+
+    setVisualProfile(cleanProfile);
+    storeUserSettings(user.id, cleanProfile);
+
+    if (supabase) {
+      await supabase.from('teamup_user_settings').upsert({
+        user_id: user.id,
+        display_name: cleanProfile.displayName,
+        icon: cleanProfile.icon,
+      });
+    }
   }
 
   function removeEvent(id: string) {
@@ -1304,6 +1569,66 @@ export default function App() {
     setChatNotice('');
   }
 
+  async function publishReview(event: FormEvent) {
+    event.preventDefault();
+
+    if (!user) {
+      setAuthNotice(t.loginRequired);
+      setActivePage('home');
+      return;
+    }
+
+    const body = reviewBody.trim();
+    if (!body) return;
+
+    const nextReview: SiteReview = {
+      id: crypto.randomUUID(),
+      authorId: user.id,
+      authorName: displayNameFromUser(user, visualProfile),
+      rating: Math.min(5, Math.max(1, Number(reviewRating) || 5)),
+      body,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('teamup_reviews')
+        .insert({
+          id: nextReview.id,
+          author_id: nextReview.authorId,
+          author_name: nextReview.authorName,
+          rating: nextReview.rating,
+          body: nextReview.body,
+        })
+        .select()
+        .single();
+
+      if (!error && data) {
+        setReviews([rowToReview(data as TeamupReviewRow), ...reviews]);
+        setReviewBody('');
+        setReviewRating('5');
+        setReviewMessage(t.reviewSaved);
+        return;
+      }
+    }
+
+    saveReviewsLocally([nextReview, ...reviews]);
+    setReviewBody('');
+    setReviewRating('5');
+    setReviewMessage(t.reviewSaved);
+  }
+
+  async function removeReview(id: string) {
+    if (!user) return;
+
+    if (supabase) {
+      await supabase.from('teamup_reviews').delete().eq('id', id).eq('author_id', user.id);
+    }
+
+    saveReviewsLocally(reviews.filter((review) => review.id !== id || review.authorId !== user.id));
+    setReviewMessage(t.reviewDeleted);
+  }
+
   async function publishProfile(event: FormEvent) {
     event.preventDefault();
     if (!user) {
@@ -1361,7 +1686,26 @@ export default function App() {
     savePeopleLocally(people.filter((person) => person.id !== id));
   }
 
+  async function removeMyProfiles() {
+    if (!user || myProfiles.length === 0) return;
+
+    if (supabase) {
+      await supabase.from('teamup_profiles').delete().eq('owner_id', user.id);
+    }
+
+    savePeopleLocally(people.filter((person) => person.ownerId !== user.id));
+    setSaveMessage(t.profileDeleted);
+  }
+
   function openPage(page: AppPage) {
+    if (!user && page !== 'home') {
+      setActivePage('home');
+      setAuthNotice(t.loginRequired);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setAuthNotice('');
     setActivePage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -1401,7 +1745,7 @@ export default function App() {
 
               return (
                 <div className={isOwnMessage ? 'chat-message is-own' : 'chat-message is-other'} key={message.id}>
-                  <b>{isOwnMessage ? 'Ты' : message.authorEmail}</b>
+                  <b>{isOwnMessage ? t.you : message.authorEmail}</b>
                   {parsedMessage.reply && <em>{parsedMessage.reply}</em>}
                   <span>{parsedMessage.body}</span>
                   <small>
@@ -1433,7 +1777,7 @@ export default function App() {
         {replyDrafts[player.id] && (
           <div className="reply-preview">
             <span>
-              <b>{t.replyingTo || 'Ответ на'}:</b> {replyDrafts[player.id]?.authorEmail} -{' '}
+              <b>{t.replyingTo}:</b> {replyDrafts[player.id]?.authorEmail} -{' '}
               {shortenChatBody(replyDrafts[player.id]?.body ?? '')}
             </span>
             <button type="button" onClick={() => setReplyDrafts((current) => ({ ...current, [player.id]: undefined }))}>
@@ -1470,28 +1814,39 @@ export default function App() {
           className={activePage === 'home' ? 'is-active' : undefined}
           onClick={() => openPage('home')}
         >
-          Начальная
+          {t.navHome}
         </button>
         <button
           type="button"
           className={activePage === 'matches' ? 'is-active' : undefined}
+          aria-disabled={!user}
           onClick={() => openPage('matches')}
         >
-          Найти напарников
+          {t.navMatches}
         </button>
         <button
           type="button"
           className={activePage === 'profile' ? 'is-active' : undefined}
+          aria-disabled={!user}
           onClick={() => openPage('profile')}
         >
-          Анкета
+          {t.navProfile}
         </button>
         <button
           type="button"
           className={activePage === 'chats' ? 'is-active' : undefined}
+          aria-disabled={!user}
           onClick={() => openPage('chats')}
         >
-          Чаты
+          {t.navChats}
+        </button>
+        <button
+          type="button"
+          className={activePage === 'reviews' ? 'is-active' : undefined}
+          aria-disabled={!user}
+          onClick={() => openPage('reviews')}
+        >
+          {t.navReviews}
         </button>
       </nav>
 
@@ -1508,7 +1863,7 @@ export default function App() {
               <input
                 list="form-languages"
                 className={looksLikeTypo(uiLanguage, formLanguageOptions) ? 'field-error' : undefined}
-                placeholder="Русский, Қазақша, English..."
+                placeholder={t.languageInputPlaceholder}
                 value={uiLanguage}
                 onChange={(event) => setUiLanguage(event.target.value)}
               />
@@ -1536,13 +1891,29 @@ export default function App() {
           <h1>{t.heroTitle}</h1>
           <p>{t.heroText}</p>
           <div className="hero-stats" aria-label="TeamUp highlights">
-            <span>200+ игр</span>
-            <span>Живые анкеты</span>
-            <span>Чат внутри сайта</span>
+            <span>{t.statGames}</span>
+            <span>{t.statProfiles}</span>
+            <span>{t.statChat}</span>
           </div>
+          <section className="hero-guide" aria-label={t.guideTitle}>
+            <h2>{t.guideTitle}</h2>
+            <ol>
+              <li>{t.guideStep1}</li>
+              <li>{t.guideStep2}</li>
+              <li>{t.guideStep3}</li>
+              <li>{t.guideStep4}</li>
+            </ol>
+          </section>
           {!user && (
             <div className="home-auth">
-              <Auth user={user} notice={authNotice} />
+              <Auth
+                user={user}
+                notice={authNotice}
+                language={activeUiLanguage}
+                visualProfile={visualProfile}
+                iconOptions={userIconOptions}
+                onVisualProfileChange={saveVisualProfile}
+              />
             </div>
           )}
         </div>
@@ -1562,7 +1933,14 @@ export default function App() {
       <section className={`workspace workspace--${activePage}`} hidden={activePage === 'home'}>
         <div className="sidebar-stack">
         <div ref={authPanelRef}>
-          <Auth user={user} notice={authNotice} />
+          <Auth
+            user={user}
+            notice={authNotice}
+            language={activeUiLanguage}
+            visualProfile={visualProfile}
+            iconOptions={userIconOptions}
+            onVisualProfileChange={saveVisualProfile}
+          />
         </div>
 
         <form ref={profilePanelRef} className="panel search-panel" onSubmit={publishProfile}>
@@ -1795,6 +2173,11 @@ export default function App() {
           <button type="submit">
             {user ? t.publish : t.publishLocked}
           </button>
+          {user && myProfiles.length > 0 && (
+            <button className="danger-button" type="button" onClick={() => void removeMyProfiles()}>
+              {t.deleteCard}
+            </button>
+          )}
           {saveMessage && <p className="save-message">{saveMessage}</p>}
         </form>
 
@@ -1980,7 +2363,7 @@ export default function App() {
                               className={isOwnMessage ? 'chat-message is-own' : 'chat-message is-other'}
                               key={message.id}
                             >
-                              <b>{isOwnMessage ? 'Ты' : message.authorEmail}</b>
+                              <b>{isOwnMessage ? t.you : message.authorEmail}</b>
                               {parsedMessage.reply && <em>{parsedMessage.reply}</em>}
                               <span>{parsedMessage.body}</span>
                               <small>
@@ -2012,7 +2395,7 @@ export default function App() {
                     {replyDrafts[player.id] && (
                       <div className="reply-preview">
                         <span>
-                          <b>{t.replyingTo || 'Ответ на'}:</b> {replyDrafts[player.id]?.authorEmail} -{' '}
+                          <b>{t.replyingTo}:</b> {replyDrafts[player.id]?.authorEmail} -{' '}
                           {shortenChatBody(replyDrafts[player.id]?.body ?? '')}
                         </span>
                         <button
@@ -2054,11 +2437,11 @@ export default function App() {
         <section className="panel chats-panel">
           <div className="section-title">
             <span>03</span>
-            <h2>Чаты</h2>
+            <h2>{t.chatsTitle}</h2>
           </div>
 
           {chatSummaries.length === 0 ? (
-            <p className="empty-state">Пока нет чатов. Открой анкету игрока и напиши первое сообщение.</p>
+            <p className="empty-state">{t.emptyChats}</p>
           ) : (
             <div className="chat-thread-list">
               {chatSummaries.map(({ profileId, player: chatPlayer, lastMessage }) => {
@@ -2094,6 +2477,64 @@ export default function App() {
                   </article>
                 );
               })}
+            </div>
+          )}
+        </section>
+
+        <section className="panel reviews-panel">
+          <div className="section-title">
+            <span>04</span>
+            <h2>{t.reviewsTitle}</h2>
+          </div>
+
+          <form className="review-form" onSubmit={publishReview}>
+            <label>
+              {t.reviewRating}
+              <select value={reviewRating} onChange={(event) => setReviewRating(event.target.value)}>
+                {[5, 4, 3, 2, 1].map((rating) => (
+                  <option key={rating} value={rating}>
+                    {'★'.repeat(rating)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              {t.reviewText}
+              <textarea
+                maxLength={240}
+                placeholder={t.reviewPlaceholder}
+                value={reviewBody}
+                onChange={(event) => setReviewBody(event.target.value)}
+                required
+              />
+            </label>
+
+            <button type="submit">{t.publishReview}</button>
+            {reviewMessage && <p className="save-message">{reviewMessage}</p>}
+          </form>
+
+          {reviews.length === 0 ? (
+            <p className="empty-state">{t.emptyReviews}</p>
+          ) : (
+            <div className="review-list">
+              {reviews.map((review) => (
+                <article className="review-card" key={review.id}>
+                  <div>
+                    <b>{review.authorName}</b>
+                    <span>{'★'.repeat(review.rating)}</span>
+                  </div>
+                  <p>{review.body}</p>
+                  <footer>
+                    <small>{timeAgo(review.createdAt, activeUiLanguage)}</small>
+                    {user && review.authorId === user.id && (
+                      <button className="ghost-action" type="button" onClick={() => void removeReview(review.id)}>
+                        {t.deleteReview}
+                      </button>
+                    )}
+                  </footer>
+                </article>
+              ))}
             </div>
           )}
         </section>

@@ -13,8 +13,8 @@ jobs:
       - name: Ping Supabase auth health
         run: |
           HTTP_CODE=$(curl -sS -o /tmp/supabase-health.txt -w "%{http_code}" \
-            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inphd2Z1ZXh1eGl5am96eG96cWRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Njg4NTksImV4cCI6MjA5ODM0NDg1OX0.Vql4LQ3h4lSfPHX6mQ5lhrm4E5bjUa_lG-OzphDMLB4" \
-            "https://zawfuexuxiyjozxozqdd.supabase.co/auth/v1/health")
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlYXBvam9tcmdueWd5YWJwY3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MTAzMzYsImV4cCI6MjA5ODI4NjMzNn0.7_kDGYsiESMq3dIFO7MmwkxLkK55nbCNCSMwOk376gQ" \
+            "https://weapojomrgnygyabpcxz.supabase.co/auth/v1/health")
 
           echo "Supabase health HTTP code: $HTTP_CODE"
           test "$HTTP_CODE" = "200"
