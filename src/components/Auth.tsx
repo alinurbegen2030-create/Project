@@ -323,7 +323,7 @@ export function Auth({
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).toString(),
         },
       });
 
