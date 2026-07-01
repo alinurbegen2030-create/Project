@@ -127,6 +127,7 @@ const authExtraCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     visualName: 'Визуальное имя',
     visualNamePlaceholder: 'Как тебя показывать на сайте',
     accountIcon: 'Иконка',
+    uploadIcon: 'Загрузить картинку',
     realLoginName: 'Настоящий вход',
     saveVisual: 'Сохранить вид',
     visualSaved: 'Визуальное имя сохранено.',
@@ -144,6 +145,7 @@ const authExtraCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     visualName: 'Көрінетін ат',
     visualNamePlaceholder: 'Сайтта қалай көрсетілесің',
     accountIcon: 'Иконка',
+    uploadIcon: 'Сурет жүктеу',
     realLoginName: 'Нақты кіру',
     saveVisual: 'Сақтау',
     visualSaved: 'Көрінетін ат сақталды.',
@@ -161,6 +163,7 @@ const authExtraCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     visualName: 'Display name',
     visualNamePlaceholder: 'How you appear on the site',
     accountIcon: 'Icon',
+    uploadIcon: 'Upload picture',
     realLoginName: 'Real login',
     saveVisual: 'Save look',
     visualSaved: 'Display name saved.',
@@ -398,12 +401,30 @@ export function Auth({
     }
   }
 
+  function uploadIcon(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setIconDraft(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }
+
   if (user) {
+    const previewIcon = visualProfile?.icon ?? iconDraft;
+
     return (
       <section className="panel auth-panel">
         <h2>{copy.account}</h2>
         <div className="account-preview">
-          <span>{visualProfile?.icon ?? iconDraft}</span>
+          <span>
+            {previewIcon.startsWith('data:image/') ? <img src={previewIcon} alt="" /> : previewIcon}
+          </span>
           <div>
             <b>{visualProfile?.displayName || visualNameDraft || displayNameFromEmail(user.email)}</b>
             <small>{copy.realLoginName}: {displayNameFromEmail(user.email)}</small>
@@ -435,6 +456,10 @@ export function Auth({
                 </button>
               ))}
             </div>
+            <label className="upload-icon">
+              {copy.uploadIcon}
+              <input type="file" accept="image/*" onChange={uploadIcon} />
+            </label>
           </div>
 
           <button type="submit" disabled={busy || !onVisualProfileChange}>

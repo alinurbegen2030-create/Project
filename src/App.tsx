@@ -115,6 +115,7 @@ type SiteReview = {
   id: string;
   authorId?: string | null;
   authorName: string;
+  authorIcon?: string;
   rating: number;
   body: string;
   createdAt: string;
@@ -124,6 +125,7 @@ type TeamupReviewRow = {
   id: string;
   author_id?: string | null;
   author_name: string;
+  author_icon?: string | null;
   rating: number;
   body: string;
   created_at: string;
@@ -481,6 +483,8 @@ const uiCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     chatsTitle: 'Чаты',
     emptyChats: 'Пока нет чатов. Открой анкету игрока и напиши первое сообщение.',
     profileDeleted: 'Анкета удалена.',
+    saveProfileChanges: 'Сохранить изменения',
+    profileUpdated: 'Анкета обновлена.',
     reviewsTitle: 'Отзывы сайта',
     reviewRating: 'Оценка',
     reviewText: 'Отзыв',
@@ -510,6 +514,8 @@ const uiCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     chatsTitle: 'Чаттар',
     emptyChats: 'Әзірге чат жоқ. Ойыншы сауалнамасын ашып, бірінші хабарлама жаз.',
     profileDeleted: 'Сауалнама өшірілді.',
+    saveProfileChanges: 'Өзгерістерді сақтау',
+    profileUpdated: 'Сауалнама жаңартылды.',
     reviewsTitle: 'Сайт пікірлері',
     reviewRating: 'Баға',
     reviewText: 'Пікір',
@@ -539,6 +545,8 @@ const uiCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     chatsTitle: 'Chats',
     emptyChats: 'No chats yet. Open a player profile and write the first message.',
     profileDeleted: 'Profile deleted.',
+    saveProfileChanges: 'Save changes',
+    profileUpdated: 'Profile updated.',
     reviewsTitle: 'Site reviews',
     reviewRating: 'Rating',
     reviewText: 'Review',
@@ -1140,6 +1148,28 @@ function playerToRow(player: Player): TeamupProfileRow {
   };
 }
 
+function playerToProfile(player: Player): Profile {
+  return {
+    name: player.anonymous ? '' : player.name,
+    anonymous: player.anonymous,
+    age: String(player.age),
+    gender: player.gender,
+    game: player.game,
+    platform: player.platform,
+    style: player.style,
+    language: player.language,
+    time: player.time,
+    mic: player.mic ? 'yes' : 'no',
+    region: player.region,
+    goal: player.goal,
+    mode: player.mode,
+    rank: player.rank === '-' ? '' : player.rank,
+    contact: player.contact,
+    experience: player.experience === '-' ? '' : player.experience,
+    about: player.about === '-' ? '' : player.about,
+  };
+}
+
 function rowToMessage(row: TeamupMessageRow): ChatMessage {
   return {
     id: row.id,
@@ -1155,10 +1185,15 @@ function rowToReview(row: TeamupReviewRow): SiteReview {
     id: row.id,
     authorId: row.author_id ?? null,
     authorName: row.author_name,
+    authorIcon: row.author_icon ?? undefined,
     rating: row.rating,
     body: row.body,
     createdAt: row.created_at,
   };
+}
+
+function getReviewAuthorIcon(review: SiteReview) {
+  return review.authorIcon || review.authorName.trim().slice(0, 2).toUpperCase() || 'TU';
 }
 
 function parseChatBody(body: string) {
@@ -1219,6 +1254,7 @@ export default function App() {
   const [theme, setTheme] = useState<DesignTheme>('neon');
   const [activePage, setActivePage] = useState<AppPage>('home');
   const [profileSearch, setProfileSearch] = useState('');
+  const [loadedProfileId, setLoadedProfileId] = useState('');
   const [contactIds, setContactIds] = useState<string[]>([]);
   const [contactsOnly, setContactsOnly] = useState(false);
   const [openChatId, setOpenChatId] = useState<string | null>(null);
@@ -1449,6 +1485,14 @@ export default function App() {
     [people, user],
   );
 
+  useEffect(() => {
+    const ownProfile = myProfiles[0];
+    if (!ownProfile || ownProfile.id === loadedProfileId) return;
+
+    setProfile(playerToProfile(ownProfile));
+    setLoadedProfileId(ownProfile.id);
+  }, [loadedProfileId, myProfiles]);
+
   const chatSummaries = useMemo(() => {
     const latestByProfile = new Map<string, ChatMessage>();
 
@@ -1488,7 +1532,10 @@ export default function App() {
 
     const cleanProfile = {
       displayName: nextProfile.displayName.trim() || defaultVisualProfile(user).displayName,
-      icon: userIconOptions.includes(nextProfile.icon) ? nextProfile.icon : userIconOptions[0],
+      icon:
+        userIconOptions.includes(nextProfile.icon) || nextProfile.icon.startsWith('data:image/')
+          ? nextProfile.icon
+          : userIconOptions[0],
     };
 
     setVisualProfile(cleanProfile);
@@ -1585,6 +1632,7 @@ export default function App() {
       id: crypto.randomUUID(),
       authorId: user.id,
       authorName: displayNameFromUser(user, visualProfile),
+      authorIcon: visualProfile?.icon ?? defaultVisualProfile(user).icon,
       rating: Math.min(5, Math.max(1, Number(reviewRating) || 5)),
       body,
       createdAt: new Date().toISOString(),
@@ -1597,6 +1645,7 @@ export default function App() {
           id: nextReview.id,
           author_id: nextReview.authorId,
           author_name: nextReview.authorName,
+          author_icon: nextReview.authorIcon,
           rating: nextReview.rating,
           body: nextReview.body,
         })
@@ -1640,8 +1689,9 @@ export default function App() {
 
     if ((!profile.anonymous && !profile.name.trim()) || !profile.contact.trim()) return;
 
+    const existingProfile = myProfiles[0];
     const nextProfile: Player = {
-      id: crypto.randomUUID(),
+      id: existingProfile?.id ?? crypto.randomUUID(),
       ownerId: user.id,
       name: profile.anonymous ? 'Anonymous' : profile.name.trim(),
       anonymous: profile.anonymous,
@@ -1661,21 +1711,27 @@ export default function App() {
       contact: profile.contact.trim(),
       about: profile.about.trim() || '-',
       tags: createTags(profile),
-      color: profileColors[people.length % profileColors.length],
+      color: existingProfile?.color ?? profileColors[people.length % profileColors.length],
     };
 
     if (supabase) {
-      const { data, error } = await supabase.from('teamup_profiles').insert(playerToRow(nextProfile)).select().single();
+      const request = existingProfile
+        ? supabase.from('teamup_profiles').update(playerToRow(nextProfile)).eq('id', existingProfile.id).eq('owner_id', user.id)
+        : supabase.from('teamup_profiles').insert(playerToRow(nextProfile));
+      const { data, error } = await request.select().single();
 
       if (!error && data) {
-        setPeople([rowToPlayer(data as TeamupProfileRow), ...people]);
-        setSaveMessage(t.saved);
+        const savedProfile = rowToPlayer(data as TeamupProfileRow);
+        setPeople(existingProfile ? people.map((person) => (person.id === existingProfile.id ? savedProfile : person)) : [savedProfile, ...people]);
+        setLoadedProfileId(savedProfile.id);
+        setSaveMessage(existingProfile ? t.profileUpdated : t.saved);
         return;
       }
     }
 
-    savePeopleLocally([nextProfile, ...people]);
-    setSaveMessage(t.saved);
+    savePeopleLocally(existingProfile ? people.map((person) => (person.id === existingProfile.id ? nextProfile : person)) : [nextProfile, ...people]);
+    setLoadedProfileId(nextProfile.id);
+    setSaveMessage(existingProfile ? t.profileUpdated : t.saved);
   }
 
   async function removeProfile(id: string) {
@@ -2171,7 +2227,7 @@ export default function App() {
           </label>
 
           <button type="submit">
-            {user ? t.publish : t.publishLocked}
+            {user ? (myProfiles.length > 0 ? t.saveProfileChanges : t.publish) : t.publishLocked}
           </button>
           {user && myProfiles.length > 0 && (
             <button className="danger-button" type="button" onClick={() => void removeMyProfiles()}>
@@ -2520,7 +2576,14 @@ export default function App() {
             <div className="review-list">
               {reviews.map((review) => (
                 <article className="review-card" key={review.id}>
-                  <div>
+                  <div className="review-card__header">
+                    <span className="review-card__avatar">
+                      {getReviewAuthorIcon(review).startsWith('data:image/') ? (
+                        <img src={getReviewAuthorIcon(review)} alt="" />
+                      ) : (
+                        getReviewAuthorIcon(review)
+                      )}
+                    </span>
                     <b>{review.authorName}</b>
                     <span>{'★'.repeat(review.rating)}</span>
                   </div>
