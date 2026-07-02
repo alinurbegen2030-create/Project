@@ -920,6 +920,32 @@ const initialProfile: Profile = {
   about: '',
 };
 
+const demoPlayers: Player[] = [
+  {
+    id: '11111111-1111-4111-8111-111111111111',
+    ownerId: null,
+    name: 'Alinur Demo',
+    anonymous: false,
+    age: 16,
+    gender: 'any',
+    game: 'Roblox',
+    platform: 'PC',
+    style: 'Casual',
+    language: 'Russian',
+    time: 'Evening',
+    mic: true,
+    region: 'Kazakhstan',
+    goal: 'Duo',
+    mode: 'Creative',
+    rank: 'Beginner',
+    experience: '1 year',
+    contact: '@alinur_demo',
+    about: 'Demo profile so the site has a first player while the database is empty.',
+    tags: ['Roblox', 'PC', 'Kazakhstan'],
+    color: '#2f9d68',
+  },
+];
+
 function sameText(left: string, right: string) {
   return left.trim().toLowerCase() === right.trim().toLowerCase();
 }
@@ -1246,7 +1272,7 @@ export default function App() {
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const events: TeamEvent[] = [];
   const [uiLanguage, setUiLanguage] = useState('Русский');
-  const [people, setPeople] = useState<Player[]>([]);
+  const [people, setPeople] = useState<Player[]>(demoPlayers);
   const [saveMessage, setSaveMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [visualProfile, setVisualProfile] = useState<UserVisualProfile | null>(null);
@@ -1416,22 +1442,25 @@ export default function App() {
           .order('created_at', { ascending: false });
 
         if (!error && data) {
-          setPeople((data as TeamupProfileRow[]).map(rowToPlayer).map(cleanPlayer).filter((player) => !isTestProfile(player)));
+          const loadedPeople = (data as TeamupProfileRow[]).map(rowToPlayer).map(cleanPlayer).filter((player) => !isTestProfile(player));
+          setPeople(loadedPeople.length > 0 ? loadedPeople : demoPlayers);
           return;
         }
       }
 
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) {
+        setPeople(demoPlayers);
         return;
       }
 
       try {
         const cleanedPeople = (JSON.parse(saved) as Player[]).map(cleanPlayer).filter((player) => !isTestProfile(player));
-        setPeople(cleanedPeople);
+        setPeople(cleanedPeople.length > 0 ? cleanedPeople : demoPlayers);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedPeople));
       } catch {
         localStorage.removeItem(STORAGE_KEY);
+        setPeople(demoPlayers);
       }
     }
 
