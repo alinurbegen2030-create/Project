@@ -928,12 +928,35 @@ const backgroundShopItems = [
   { id: 'bg-galaxy', title: 'Galaxy', price: 130 },
   { id: 'bg-lava', title: 'Lava', price: 150 },
 ];
-const questItems = [
-  { id: 'quest-profile', reward: 60 },
-  { id: 'quest-contact', reward: 40 },
-  { id: 'quest-chat', reward: 70 },
-  { id: 'quest-review', reward: 80 },
+const questDifficulties = [
+  { id: 'easy', ru: 'Легкий', en: 'Easy', reward: 25, count: 40 },
+  { id: 'medium', ru: 'Средний', en: 'Medium', reward: 55, count: 30 },
+  { id: 'hard', ru: 'Сложный', en: 'Hard', reward: 100, count: 20 },
+  { id: 'impossible', ru: 'Невозможный', en: 'Impossible', reward: 220, count: 7 },
+  { id: 'secret', ru: 'Секретный', en: 'Secret', reward: 350, count: 3 },
 ];
+const questTemplates = [
+  'обнови анкету',
+  'найди игрока',
+  'проверь магазин',
+  'выбери фон',
+  'добавь контакт',
+  'открой чат',
+  'напиши сообщение',
+  'оставь отзыв',
+  'проверь фильтры',
+  'зайди на новую страницу',
+];
+const questItems = questDifficulties.flatMap((difficulty) =>
+  Array.from({ length: difficulty.count }, (_, index) => ({
+    id: `quest-${difficulty.id}-${index + 1}`,
+    difficulty: difficulty.id,
+    difficultyRu: difficulty.ru,
+    difficultyEn: difficulty.en,
+    reward: difficulty.reward + index * 5,
+    task: questTemplates[index % questTemplates.length],
+  })),
+);
 const designThemes: Array<{ id: DesignTheme; label: string }> = [
   { id: 'neon', label: 'Neon' },
   { id: 'arena', label: 'Arena' },
@@ -2209,28 +2232,28 @@ export default function App() {
     );
   }
 
-  const questProgress = [
-    {
-      ...questItems[0],
-      title: activeUiLanguage === 'en' ? 'Create your profile' : 'Создай анкету',
-      ready: myProfiles.length > 0,
-    },
-    {
-      ...questItems[1],
-      title: activeUiLanguage === 'en' ? 'Add a contact' : 'Добавь контакт',
-      ready: contactIds.length > 0,
-    },
-    {
-      ...questItems[2],
-      title: activeUiLanguage === 'en' ? 'Send a chat message' : 'Напиши в чат',
-      ready: allMessages.some((message) => message.authorEmail === (user?.email ?? '')),
-    },
-    {
-      ...questItems[3],
-      title: activeUiLanguage === 'en' ? 'Leave a site review' : 'Оставь отзыв',
-      ready: Boolean(user && reviews.some((review) => review.authorId === user.id)),
-    },
+  const realQuestReady = [
+    myProfiles.length > 0,
+    contactIds.length > 0,
+    allMessages.some((message) => message.authorEmail === (user?.email ?? '')),
+    Boolean(user && reviews.some((review) => review.authorId === user.id)),
   ];
+  const realQuestTitles = activeUiLanguage === 'en'
+    ? ['Create your profile', 'Add a contact', 'Send a chat message', 'Leave a site review']
+    : ['Создай анкету', 'Добавь контакт', 'Напиши в чат', 'Оставь отзыв'];
+  const questProgress = questItems.map((quest, index) => {
+    const difficulty = activeUiLanguage === 'en' ? quest.difficultyEn : quest.difficultyRu;
+    const task = activeUiLanguage === 'en' ? quest.task : quest.task;
+    const title = index < realQuestTitles.length ? realQuestTitles[index] : `${difficulty} #${index + 1}: ${task}`;
+
+    return {
+      ...quest,
+      title,
+      difficultyId: quest.difficulty,
+      difficulty,
+      ready: index < realQuestReady.length ? realQuestReady[index] : true,
+    };
+  });
 
   return (
     <main className="app-shell" data-theme={theme} data-shop-bg={shopState.activeBackground}>
@@ -3063,6 +3086,9 @@ export default function App() {
               return (
                 <article className="quest-card" key={quest.id}>
                   <div>
+                    <span className={`quest-difficulty quest-difficulty--${quest.difficultyId}`}>
+                      {quest.difficulty}
+                    </span>
                     <b>{quest.title}</b>
                     <small>+{quest.reward} XP</small>
                   </div>

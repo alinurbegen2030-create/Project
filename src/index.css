@@ -705,6 +705,26 @@ textarea {
   align-items: center;
 }
 
+.quest-card > div {
+  display: grid;
+  gap: 6px;
+}
+
+.quest-difficulty {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.quest-difficulty--easy { background: #22c55e; }
+.quest-difficulty--medium { background: #2563eb; }
+.quest-difficulty--hard { background: #f97316; }
+.quest-difficulty--impossible { background: #7c2d12; }
+.quest-difficulty--secret { background: #7c3aed; }
+
 .app-shell[data-shop-bg="bg-aurora"] { background-image: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(6, 182, 212, 0.18), rgba(168, 85, 247, 0.16)); }
 .app-shell[data-shop-bg="bg-cyber"] { background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.24), rgba(20, 184, 166, 0.18), rgba(244, 63, 94, 0.16)); }
 .app-shell[data-shop-bg="bg-ocean"] { background-image: linear-gradient(135deg, rgba(2, 132, 199, 0.2), rgba(14, 165, 233, 0.18), rgba(204, 251, 241, 0.22)); }
