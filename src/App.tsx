@@ -911,6 +911,7 @@ const BLOCKED_KEY = 'teamup-blocked-profile-ids';
 const CHAT_READS_KEY = 'teamup-chat-read-times';
 const CHAT_CLEARS_KEY = 'teamup-chat-clear-times';
 const SHOP_KEY = 'teamup-shop-state';
+const STARTER_XP = 10_000_000_000_000_000_000;
 const userIconOptions = ['TU', 'GG', 'XP', 'LV', 'HP', 'VR'];
 const profileColors = ['#e25555', '#2f9d68', '#e6a13d', '#6c63d9', '#3c7dd9', '#111827'];
 const avatarShopItems = [
@@ -1158,12 +1159,13 @@ function getStoredRecord(key: string) {
 
 function getStoredShopState(): ShopState {
   const saved = localStorage.getItem(SHOP_KEY);
-  const fallback: ShopState = { xp: 120, ownedItems: [], completedQuests: [], activeBackground: '' };
+  const fallback: ShopState = { xp: STARTER_XP, ownedItems: [], completedQuests: [], activeBackground: '' };
 
   if (!saved) return fallback;
 
   try {
-    return { ...fallback, ...(JSON.parse(saved) as Partial<ShopState>) };
+    const stored = { ...fallback, ...(JSON.parse(saved) as Partial<ShopState>) };
+    return { ...stored, xp: Math.max(stored.xp, STARTER_XP) };
   } catch {
     localStorage.removeItem(SHOP_KEY);
     return fallback;
@@ -3033,7 +3035,7 @@ export default function App() {
 
           <div className="xp-card">
             <span>{extraUi.xp}</span>
-            <strong>{shopState.xp}</strong>
+            <strong>{shopState.xp.toLocaleString('ru-RU')}</strong>
           </div>
 
           <h3>{extraUi.avatarItems}</h3>
