@@ -125,22 +125,22 @@ textarea {
 }
 
 .app-shell[data-theme="pixel"] {
-  --bg: #111827;
-  --surface: #f8fafc;
-  --ink: #0f172a;
-  --muted: #475569;
-  --line: #111827;
-  --accent: #f59e0b;
-  --accent-dark: #b45309;
+  --bg: #ffffff;
+  --surface: #f1f4f7;
+  --ink: #1c1e21;
+  --muted: #5d6c7b;
+  --line: #ced0d4;
+  --accent: #0064e0;
+  --accent-dark: #0457cb;
   --page-bg:
-    linear-gradient(45deg, rgba(255, 255, 255, 0.08) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255, 255, 255, 0.08) 25%, transparent 25%),
-    linear-gradient(135deg, #111827, #312e81);
-  --panel-bg: rgba(248, 250, 252, 0.94);
-  --red-card: linear-gradient(135deg, #f97316, #b91c1c);
-  --green-card: linear-gradient(135deg, #84cc16, #15803d);
-  --blue-card: linear-gradient(135deg, #38bdf8, #1d4ed8);
-  --shadow: 8px 8px 0 rgba(15, 23, 42, 0.9);
+    linear-gradient(90deg, rgba(0, 100, 224, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(0, 100, 224, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, #ffffff, #f1f4f7);
+  --panel-bg: rgba(255, 255, 255, 0.96);
+  --red-card: linear-gradient(135deg, #e41e3f, #f2a918);
+  --green-card: linear-gradient(135deg, #31a24c, #24e400);
+  --blue-card: linear-gradient(135deg, #0064e0, #0091ff);
+  --shadow: 8px 8px 0 rgba(10, 19, 23, 0.88);
 }
 
 .language-menu {
@@ -1537,6 +1537,26 @@ textarea:focus {
 .app-shell[data-theme="pixel"] .theme-picker {
   border-width: 2px;
   box-shadow: 5px 5px 0 rgba(15, 23, 42, 0.86);
+}
+
+.app-shell[data-theme="pixel"] button {
+  background: #ffffff;
+  color: #1c1e21;
+}
+
+.app-shell[data-theme="pixel"] button:hover,
+.app-shell[data-theme="pixel"] button.is-active,
+.app-shell[data-theme="pixel"] button[type="submit"],
+.app-shell[data-theme="pixel"] .chat-action,
+.app-shell[data-theme="pixel"] .contact-action {
+  background: #0064e0;
+  color: #ffffff;
+}
+
+.app-shell[data-theme="pixel"] .ghost-action,
+.app-shell[data-theme="pixel"] .danger-button {
+  background: #ffffff;
+  color: #1c1e21;
 }
 
 .app-shell[data-theme="pixel"] .game-card {
