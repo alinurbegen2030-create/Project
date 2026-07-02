@@ -28,8 +28,9 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_SUPABASE_URL: https://zawfuexuxiyjozxozqdd.supabase.co
-          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inphd2Z1ZXh1eGl5am96eG96cWRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Njg4NTksImV4cCI6MjA5ODM0NDg1OX0.Vql4LQ3h4lSfPHX6mQ5lhrm4E5bjUa_lG-OzphDMLB4
+          VITE_SUPABASE_URL: https://weapojomrgnygyabpcxz.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlYXBvam9tcmdueWd5YWJwY3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MTAzMzYsImV4cCI6MjA5ODI4NjMzNn0.7_kDGYsiESMq3dIFO7MmwkxLkK55nbCNCSMwOk376gQ
+          VITE_ENABLED_OAUTH_PROVIDERS: google,github,discord
 
       - name: Publish to gh-pages
         uses: peaceiris/actions-gh-pages@v4
