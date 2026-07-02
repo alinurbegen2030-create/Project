@@ -920,31 +920,7 @@ const initialProfile: Profile = {
   about: '',
 };
 
-const demoPlayers: Player[] = [
-  {
-    id: '11111111-1111-4111-8111-111111111111',
-    ownerId: null,
-    name: 'Alinur Demo',
-    anonymous: false,
-    age: 16,
-    gender: 'any',
-    game: 'Roblox',
-    platform: 'PC',
-    style: 'Casual',
-    language: 'Russian',
-    time: 'Evening',
-    mic: true,
-    region: 'Kazakhstan',
-    goal: 'Duo',
-    mode: 'Creative',
-    rank: 'Beginner',
-    experience: '1 year',
-    contact: '@alinur_demo',
-    about: 'Demo profile so the site has a first player while the database is empty.',
-    tags: ['Roblox', 'PC', 'Kazakhstan'],
-    color: '#2f9d68',
-  },
-];
+const demoPlayers: Player[] = [];
 
 function sameText(left: string, right: string) {
   return left.trim().toLowerCase() === right.trim().toLowerCase();
@@ -1040,13 +1016,22 @@ function cleanPlayer(player: Player): Player {
 }
 
 function isTestProfile(player: Player) {
+  const searchableText = [player.id, player.name, player.rank, player.contact, player.about]
+    .join(' ')
+    .toLowerCase();
+
   return (
     player.id === '00000000-0000-4000-8000-000000000777' ||
     player.id.startsWith('teamup-ai-') ||
     player.name.toLowerCase() === 'test player' ||
     player.contact.toLowerCase().includes('@teamup_test') ||
     player.contact.toLowerCase().includes('@teamup_ai') ||
-    player.rank.toLowerCase() === 'ai bot'
+    player.rank.toLowerCase() === 'ai bot' ||
+    searchableText.includes('ai bot') ||
+    searchableText.includes('ии бот') ||
+    searchableText.includes('бот') ||
+    searchableText.includes(' bot') ||
+    searchableText.includes('demo')
   );
 }
 
