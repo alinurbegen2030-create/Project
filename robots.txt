@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://project-delta-seven-81.vercel.app/sitemap.xml
+Sitemap: https://alinurbegen2030-create.github.io/Project/sitemap.xml
