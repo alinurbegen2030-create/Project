@@ -2235,8 +2235,9 @@ export default function App() {
           <p>{pageInfo[activePage].text}</p>
         </header>
 
-        <div className="sidebar-stack">
-        <div ref={authPanelRef}>
+        {activePage === 'profile' && (
+        <div className="sidebar-stack page-only">
+          <div ref={authPanelRef}>
           <Auth
             user={user}
             notice={authNotice}
@@ -2245,7 +2246,7 @@ export default function App() {
             iconOptions={userIconOptions}
             onVisualProfileChange={saveVisualProfile}
           />
-        </div>
+          </div>
 
         <form ref={profilePanelRef} className="panel search-panel" onSubmit={publishProfile}>
           <div className="section-title">
@@ -2486,7 +2487,9 @@ export default function App() {
         </form>
 
         </div>
+        )}
 
+        {activePage === 'matches' && (
         <section ref={matchesPanelRef} className="panel matches-panel">
           <div className="section-title">
             <span>02</span>
@@ -2796,7 +2799,9 @@ export default function App() {
             </div>
           )}
         </section>
+        )}
 
+        {activePage === 'chats' && (
         <section className="panel chats-panel">
           <div className="section-title">
             <span>03</span>
@@ -2849,7 +2854,9 @@ export default function App() {
             </div>
           )}
         </section>
+        )}
 
+        {activePage === 'reviews' && (
         <section className="panel reviews-panel">
           <div className="section-title">
             <span>04</span>
@@ -2914,6 +2921,7 @@ export default function App() {
             </div>
           )}
         </section>
+        )}
       </section>
     </main>
   );
