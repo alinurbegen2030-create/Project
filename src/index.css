@@ -613,6 +613,11 @@ textarea {
   justify-content: center;
 }
 
+.workspace--shop {
+  grid-template-columns: minmax(0, 960px);
+  justify-content: center;
+}
+
 .workspace--reviews .sidebar-stack,
 .workspace--reviews .matches-panel,
 .workspace--reviews .chats-panel {
@@ -622,6 +627,93 @@ textarea {
 .workspace:not(.workspace--reviews) .reviews-panel {
   display: none;
 }
+
+.shop-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.xp-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+}
+
+.xp-card span {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.xp-card strong {
+  color: var(--accent-dark);
+  font-size: 34px;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shop-card,
+.quest-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--accent) 6%);
+}
+
+.shop-icon,
+.background-preview {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 900;
+}
+
+.shop-icon {
+  background: linear-gradient(135deg, #111827, var(--accent));
+}
+
+.background-preview {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.bg-aurora { background: linear-gradient(135deg, #22c55e, #06b6d4, #a855f7); }
+.bg-cyber { background: linear-gradient(135deg, #0f172a, #14b8a6, #f43f5e); }
+.bg-ocean { background: linear-gradient(135deg, #0284c7, #0ea5e9, #ccfbf1); }
+.bg-sunset { background: linear-gradient(135deg, #f97316, #ec4899, #312e81); }
+.bg-forest { background: linear-gradient(135deg, #14532d, #22c55e, #facc15); }
+.bg-galaxy { background: linear-gradient(135deg, #111827, #7c3aed, #06b6d4); }
+.bg-lava { background: linear-gradient(135deg, #7f1d1d, #ef4444, #f59e0b); }
+
+.quest-list {
+  display: grid;
+  gap: 10px;
+}
+
+.quest-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.app-shell[data-shop-bg="bg-aurora"] { background-image: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(6, 182, 212, 0.18), rgba(168, 85, 247, 0.16)); }
+.app-shell[data-shop-bg="bg-cyber"] { background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.24), rgba(20, 184, 166, 0.18), rgba(244, 63, 94, 0.16)); }
+.app-shell[data-shop-bg="bg-ocean"] { background-image: linear-gradient(135deg, rgba(2, 132, 199, 0.2), rgba(14, 165, 233, 0.18), rgba(204, 251, 241, 0.22)); }
+.app-shell[data-shop-bg="bg-sunset"] { background-image: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(236, 72, 153, 0.16), rgba(49, 46, 129, 0.16)); }
+.app-shell[data-shop-bg="bg-forest"] { background-image: linear-gradient(135deg, rgba(20, 83, 45, 0.18), rgba(34, 197, 94, 0.16), rgba(250, 204, 21, 0.16)); }
+.app-shell[data-shop-bg="bg-galaxy"] { background-image: linear-gradient(135deg, rgba(17, 24, 39, 0.22), rgba(124, 58, 237, 0.18), rgba(6, 182, 212, 0.15)); }
+.app-shell[data-shop-bg="bg-lava"] { background-image: linear-gradient(135deg, rgba(127, 29, 29, 0.2), rgba(239, 68, 68, 0.16), rgba(245, 158, 11, 0.16)); }
 
 .sidebar-stack {
   display: grid;
@@ -2004,6 +2096,7 @@ button:hover {
   .form-grid,
   .details-list,
   .advanced-filters,
+  .shop-grid,
   .chat-compose {
     grid-template-columns: 1fr;
   }

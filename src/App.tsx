@@ -5,7 +5,7 @@ import { supabase } from './lib/supabase';
 
 type SupportedUiLanguage = 'ru' | 'kk' | 'en';
 type DesignTheme = 'neon' | 'arena' | 'pixel';
-type AppPage = 'home' | 'matches' | 'profile' | 'chats' | 'reviews';
+type AppPage = 'home' | 'matches' | 'profile' | 'chats' | 'reviews' | 'shop';
 
 type UserVisualProfile = {
   displayName: string;
@@ -131,7 +131,14 @@ type TeamupReviewRow = {
   created_at: string;
 };
 
-const appPages: AppPage[] = ['home', 'matches', 'profile', 'chats', 'reviews'];
+type ShopState = {
+  xp: number;
+  ownedItems: string[];
+  completedQuests: string[];
+  activeBackground: string;
+};
+
+const appPages: AppPage[] = ['home', 'matches', 'profile', 'chats', 'reviews', 'shop'];
 
 function getPageFromHash(): AppPage {
   const hashPage = window.location.hash.replace('#', '') as AppPage;
@@ -903,8 +910,30 @@ const REPORTS_KEY = 'teamup-reported-profile-ids';
 const BLOCKED_KEY = 'teamup-blocked-profile-ids';
 const CHAT_READS_KEY = 'teamup-chat-read-times';
 const CHAT_CLEARS_KEY = 'teamup-chat-clear-times';
+const SHOP_KEY = 'teamup-shop-state';
 const userIconOptions = ['TU', 'GG', 'XP', 'LV', 'HP', 'VR'];
 const profileColors = ['#e25555', '#2f9d68', '#e6a13d', '#6c63d9', '#3c7dd9', '#111827'];
+const avatarShopItems = [
+  { id: 'icon-crown', icon: 'CR', title: 'Crown', price: 90 },
+  { id: 'icon-fire', icon: 'FR', title: 'Fire', price: 120 },
+  { id: 'icon-diamond', icon: 'DM', title: 'Diamond', price: 150 },
+  { id: 'icon-ghost', icon: 'GH', title: 'Ghost', price: 170 },
+];
+const backgroundShopItems = [
+  { id: 'bg-aurora', title: 'Aurora', price: 80 },
+  { id: 'bg-cyber', title: 'Cyber', price: 90 },
+  { id: 'bg-ocean', title: 'Ocean', price: 90 },
+  { id: 'bg-sunset', title: 'Sunset', price: 100 },
+  { id: 'bg-forest', title: 'Forest', price: 100 },
+  { id: 'bg-galaxy', title: 'Galaxy', price: 130 },
+  { id: 'bg-lava', title: 'Lava', price: 150 },
+];
+const questItems = [
+  { id: 'quest-profile', reward: 60 },
+  { id: 'quest-contact', reward: 40 },
+  { id: 'quest-chat', reward: 70 },
+  { id: 'quest-review', reward: 80 },
+];
 const designThemes: Array<{ id: DesignTheme; label: string }> = [
   { id: 'neon', label: 'Neon' },
   { id: 'arena', label: 'Arena' },
@@ -1093,6 +1122,20 @@ function getStoredRecord(key: string) {
   } catch {
     localStorage.removeItem(key);
     return {};
+  }
+}
+
+function getStoredShopState(): ShopState {
+  const saved = localStorage.getItem(SHOP_KEY);
+  const fallback: ShopState = { xp: 120, ownedItems: [], completedQuests: [], activeBackground: '' };
+
+  if (!saved) return fallback;
+
+  try {
+    return { ...fallback, ...(JSON.parse(saved) as Partial<ShopState>) };
+  } catch {
+    localStorage.removeItem(SHOP_KEY);
+    return fallback;
   }
 }
 
@@ -1339,6 +1382,7 @@ export default function App() {
   const [reviewRating, setReviewRating] = useState('5');
   const [reviewBody, setReviewBody] = useState('');
   const [reviewMessage, setReviewMessage] = useState('');
+  const [shopState, setShopState] = useState<ShopState>(() => getStoredShopState());
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
   const [replyDrafts, setReplyDrafts] = useState<Record<string, ReplyTarget | undefined>>({});
   const [chatNotice, setChatNotice] = useState('');
@@ -1359,6 +1403,17 @@ export default function App() {
     block: activeUiLanguage === 'en' ? 'Block' : 'Заблокировать',
     clearChat: activeUiLanguage === 'en' ? 'Clear chat' : 'Очистить чат',
     unread: activeUiLanguage === 'en' ? 'new' : 'новое',
+    shop: activeUiLanguage === 'en' ? 'Shop' : 'Магазин',
+    xp: 'XP',
+    buy: activeUiLanguage === 'en' ? 'Buy' : 'Купить',
+    equip: activeUiLanguage === 'en' ? 'Equip' : 'Поставить',
+    active: activeUiLanguage === 'en' ? 'Active' : 'Выбрано',
+    owned: activeUiLanguage === 'en' ? 'Owned' : 'Куплено',
+    avatarItems: activeUiLanguage === 'en' ? 'Avatar items' : 'Предметы для аватарки',
+    backgrounds: activeUiLanguage === 'en' ? 'Backgrounds' : 'Фоны',
+    quests: activeUiLanguage === 'en' ? 'Quests' : 'Квесты',
+    claim: activeUiLanguage === 'en' ? 'Claim XP' : 'Забрать XP',
+    claimed: activeUiLanguage === 'en' ? 'Claimed' : 'Получено',
   };
   const pageInfo: Record<AppPage, { title: string; text: string }> = {
     home: {
@@ -1390,7 +1445,18 @@ export default function App() {
           ? 'Leave feedback about TeamUp and read other reviews.'
           : 'Оставь отзыв о TeamUp и посмотри отзывы других.',
     },
+    shop: {
+      title: extraUi.shop,
+      text:
+        activeUiLanguage === 'en'
+          ? 'Earn XP from quests, buy avatar items, and unlock backgrounds.'
+          : 'Зарабатывай XP за квесты, покупай предметы для аватарки и открывай фоны.',
+    },
   };
+  const ownedAvatarIcons = avatarShopItems
+    .filter((item) => shopState.ownedItems.includes(item.id))
+    .map((item) => item.icon);
+  const availableIconOptions = Array.from(new Set([...userIconOptions, ...ownedAvatarIcons]));
 
   useEffect(() => {
     if (!supabase) return;
@@ -1485,6 +1551,10 @@ export default function App() {
     setReadChatTimes(getStoredRecord(CHAT_READS_KEY));
     setClearChatTimes(getStoredRecord(CHAT_CLEARS_KEY));
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(SHOP_KEY, JSON.stringify(shopState));
+  }, [shopState]);
 
   useEffect(() => {
     const savedMessages = localStorage.getItem(MESSAGES_KEY);
@@ -1720,9 +1790,9 @@ export default function App() {
     const cleanProfile = {
       displayName: nextProfile.displayName.trim() || defaultVisualProfile(user).displayName,
       icon:
-        userIconOptions.includes(nextProfile.icon) || nextProfile.icon.startsWith('data:image/')
+        availableIconOptions.includes(nextProfile.icon) || nextProfile.icon.startsWith('data:image/')
           ? nextProfile.icon
-          : userIconOptions[0],
+          : availableIconOptions[0],
     };
 
     setVisualProfile(cleanProfile);
@@ -1793,6 +1863,42 @@ export default function App() {
       return next;
     });
     setOpenChatId((current) => (current === id ? null : current));
+  }
+
+  function buyShopItem(id: string, price: number) {
+    setShopState((current) => {
+      if (current.ownedItems.includes(id) || current.xp < price) return current;
+      return {
+        ...current,
+        xp: current.xp - price,
+        ownedItems: [...current.ownedItems, id],
+      };
+    });
+  }
+
+  async function equipAvatarItem(icon: string) {
+    if (!user) return;
+    await saveVisualProfile({
+      displayName: visualProfile?.displayName ?? defaultVisualProfile(user).displayName,
+      icon,
+    });
+  }
+
+  function equipBackground(id: string) {
+    if (!shopState.ownedItems.includes(id)) return;
+    setShopState((current) => ({ ...current, activeBackground: id }));
+  }
+
+  function claimQuest(id: string, reward: number, isReady: boolean) {
+    if (!isReady) return;
+    setShopState((current) => {
+      if (current.completedQuests.includes(id)) return current;
+      return {
+        ...current,
+        xp: current.xp + reward,
+        completedQuests: [...current.completedQuests, id],
+      };
+    });
   }
 
   async function sendChatMessage(profileId: string) {
@@ -2103,8 +2209,31 @@ export default function App() {
     );
   }
 
+  const questProgress = [
+    {
+      ...questItems[0],
+      title: activeUiLanguage === 'en' ? 'Create your profile' : 'Создай анкету',
+      ready: myProfiles.length > 0,
+    },
+    {
+      ...questItems[1],
+      title: activeUiLanguage === 'en' ? 'Add a contact' : 'Добавь контакт',
+      ready: contactIds.length > 0,
+    },
+    {
+      ...questItems[2],
+      title: activeUiLanguage === 'en' ? 'Send a chat message' : 'Напиши в чат',
+      ready: allMessages.some((message) => message.authorEmail === (user?.email ?? '')),
+    },
+    {
+      ...questItems[3],
+      title: activeUiLanguage === 'en' ? 'Leave a site review' : 'Оставь отзыв',
+      ready: Boolean(user && reviews.some((review) => review.authorId === user.id)),
+    },
+  ];
+
   return (
-    <main className="app-shell" data-theme={theme}>
+    <main className="app-shell" data-theme={theme} data-shop-bg={shopState.activeBackground}>
       <nav className="app-nav" aria-label="TeamUp pages">
         <button
           type="button"
@@ -2145,6 +2274,14 @@ export default function App() {
           onClick={() => openPage('reviews')}
         >
           {t.navReviews}
+        </button>
+        <button
+          type="button"
+          className={activePage === 'shop' ? 'is-active' : undefined}
+          aria-disabled={!user}
+          onClick={() => openPage('shop')}
+        >
+          {extraUi.shop}
         </button>
       </nav>
 
@@ -2209,7 +2346,7 @@ export default function App() {
                 notice={authNotice}
                 language={activeUiLanguage}
                 visualProfile={visualProfile}
-                iconOptions={userIconOptions}
+                iconOptions={availableIconOptions}
                 onVisualProfileChange={saveVisualProfile}
               />
             </div>
@@ -2243,7 +2380,7 @@ export default function App() {
             notice={authNotice}
             language={activeUiLanguage}
             visualProfile={visualProfile}
-            iconOptions={userIconOptions}
+            iconOptions={availableIconOptions}
             onVisualProfileChange={saveVisualProfile}
           />
           </div>
@@ -2853,6 +2990,93 @@ export default function App() {
               })}
             </div>
           )}
+        </section>
+        )}
+
+        {activePage === 'shop' && (
+        <section className="panel shop-panel">
+          <div className="section-title">
+            <span>05</span>
+            <h2>{extraUi.shop}</h2>
+          </div>
+
+          <div className="xp-card">
+            <span>{extraUi.xp}</span>
+            <strong>{shopState.xp}</strong>
+          </div>
+
+          <h3>{extraUi.avatarItems}</h3>
+          <div className="shop-grid">
+            {avatarShopItems.map((item) => {
+              const owned = shopState.ownedItems.includes(item.id);
+              const active = visualProfile?.icon === item.icon;
+
+              return (
+                <article className="shop-card" key={item.id}>
+                  <span className="shop-icon">{item.icon}</span>
+                  <b>{item.title}</b>
+                  <small>{item.price} XP</small>
+                  {owned ? (
+                    <button type="button" disabled={active} onClick={() => void equipAvatarItem(item.icon)}>
+                      {active ? extraUi.active : extraUi.equip}
+                    </button>
+                  ) : (
+                    <button type="button" disabled={shopState.xp < item.price} onClick={() => buyShopItem(item.id, item.price)}>
+                      {extraUi.buy}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+
+          <h3>{extraUi.backgrounds}</h3>
+          <div className="shop-grid">
+            {backgroundShopItems.map((item) => {
+              const owned = shopState.ownedItems.includes(item.id);
+              const active = shopState.activeBackground === item.id;
+
+              return (
+                <article className="shop-card" key={item.id}>
+                  <span className={`background-preview ${item.id}`} />
+                  <b>{item.title}</b>
+                  <small>{item.price} XP</small>
+                  {owned ? (
+                    <button type="button" disabled={active} onClick={() => equipBackground(item.id)}>
+                      {active ? extraUi.active : extraUi.equip}
+                    </button>
+                  ) : (
+                    <button type="button" disabled={shopState.xp < item.price} onClick={() => buyShopItem(item.id, item.price)}>
+                      {extraUi.buy}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+
+          <h3>{extraUi.quests}</h3>
+          <div className="quest-list">
+            {questProgress.map((quest) => {
+              const claimed = shopState.completedQuests.includes(quest.id);
+
+              return (
+                <article className="quest-card" key={quest.id}>
+                  <div>
+                    <b>{quest.title}</b>
+                    <small>+{quest.reward} XP</small>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!quest.ready || claimed}
+                    onClick={() => claimQuest(quest.id, quest.reward, quest.ready)}
+                  >
+                    {claimed ? extraUi.claimed : extraUi.claim}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
         </section>
         )}
 
