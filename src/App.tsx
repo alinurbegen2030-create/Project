@@ -892,6 +892,10 @@ const CONTACTS_KEY = 'teamup-contact-profile-ids';
 const MESSAGES_KEY = 'teamup-chat-messages';
 const REVIEWS_KEY = 'teamup-site-reviews';
 const USER_SETTINGS_KEY = 'teamup-user-visual-settings';
+const REPORTS_KEY = 'teamup-reported-profile-ids';
+const BLOCKED_KEY = 'teamup-blocked-profile-ids';
+const CHAT_READS_KEY = 'teamup-chat-read-times';
+const CHAT_CLEARS_KEY = 'teamup-chat-clear-times';
 const userIconOptions = ['TU', 'GG', 'XP', 'LV', 'HP', 'VR'];
 const profileColors = ['#e25555', '#2f9d68', '#e6a13d', '#6c63d9', '#3c7dd9', '#111827'];
 const designThemes: Array<{ id: DesignTheme; label: string }> = [
@@ -1059,6 +1063,43 @@ function getStoredMessages() {
 
 function getDisplayName(player: Player, anonymousLabel: string) {
   return player.anonymous ? anonymousLabel : player.name;
+}
+
+function getStoredStringArray(key: string) {
+  const saved = localStorage.getItem(key);
+  if (!saved) return [];
+
+  try {
+    return JSON.parse(saved) as string[];
+  } catch {
+    localStorage.removeItem(key);
+    return [];
+  }
+}
+
+function getStoredRecord(key: string) {
+  const saved = localStorage.getItem(key);
+  if (!saved) return {};
+
+  try {
+    return JSON.parse(saved) as Record<string, string>;
+  } catch {
+    localStorage.removeItem(key);
+    return {};
+  }
+}
+
+function getPresenceStatus(player: Player, lang: SupportedUiLanguage) {
+  const seed = player.id.split('').reduce((total, char) => total + char.charCodeAt(0), 0);
+
+  if (seed % 3 === 0) return lang === 'en' ? 'online' : 'онлайн';
+  if (seed % 3 === 1) return lang === 'en' ? 'was recently' : 'был недавно';
+  return lang === 'en' ? 'offline' : 'не в сети';
+}
+
+function isMessageAfterClear(message: ChatMessage, clearTimes: Record<string, string>) {
+  const clearedAt = clearTimes[message.profileId];
+  return !clearedAt || new Date(message.createdAt).getTime() > new Date(clearedAt).getTime();
 }
 
 function defaultVisualProfile(user: User): UserVisualProfile {
@@ -1271,9 +1312,18 @@ export default function App() {
   const [theme, setTheme] = useState<DesignTheme>('neon');
   const [activePage, setActivePage] = useState<AppPage>('home');
   const [profileSearch, setProfileSearch] = useState('');
+  const [filterGame, setFilterGame] = useState('');
+  const [filterLanguage, setFilterLanguage] = useState('');
+  const [filterMic, setFilterMic] = useState('any');
+  const [filterAgeMin, setFilterAgeMin] = useState('');
+  const [filterAgeMax, setFilterAgeMax] = useState('');
   const [loadedProfileId, setLoadedProfileId] = useState('');
   const [contactIds, setContactIds] = useState<string[]>([]);
   const [contactsOnly, setContactsOnly] = useState(false);
+  const [reportedIds, setReportedIds] = useState<string[]>([]);
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
+  const [readChatTimes, setReadChatTimes] = useState<Record<string, string>>({});
+  const [clearChatTimes, setClearChatTimes] = useState<Record<string, string>>({});
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [allMessages, setAllMessages] = useState<ChatMessage[]>([]);
@@ -1294,6 +1344,13 @@ export default function App() {
     ...chatText[activeUiLanguage],
     ...eventText[activeUiLanguage],
     ...uiCopy[activeUiLanguage],
+  };
+  const extraUi = {
+    status: activeUiLanguage === 'en' ? 'Status' : 'Статус',
+    report: activeUiLanguage === 'en' ? 'Report' : 'Пожаловаться',
+    block: activeUiLanguage === 'en' ? 'Block' : 'Заблокировать',
+    clearChat: activeUiLanguage === 'en' ? 'Clear chat' : 'Очистить чат',
+    unread: activeUiLanguage === 'en' ? 'new' : 'новое',
   };
 
   useEffect(() => {
@@ -1367,6 +1424,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    setReportedIds(getStoredStringArray(REPORTS_KEY));
+    setBlockedIds(getStoredStringArray(BLOCKED_KEY));
+    setReadChatTimes(getStoredRecord(CHAT_READS_KEY));
+    setClearChatTimes(getStoredRecord(CHAT_CLEARS_KEY));
+  }, []);
+
+  useEffect(() => {
     const savedMessages = localStorage.getItem(MESSAGES_KEY);
     if (!savedMessages) return;
 
@@ -1389,16 +1453,20 @@ export default function App() {
           .order('created_at', { ascending: true });
 
         if (!error && data) {
-          setAllMessages((data as TeamupMessageRow[]).map(rowToMessage).filter((message) => !isRemovedBotMessage(message)));
+          setAllMessages(
+            (data as TeamupMessageRow[])
+              .map(rowToMessage)
+              .filter((message) => !isRemovedBotMessage(message) && isMessageAfterClear(message, clearChatTimes)),
+          );
           return;
         }
       }
 
-      setAllMessages(getStoredMessages());
+      setAllMessages(getStoredMessages().filter((message) => isMessageAfterClear(message, clearChatTimes)));
     }
 
     loadAllMessages();
-  }, []);
+  }, [clearChatTimes]);
 
   useEffect(() => {
     async function loadReviews() {
@@ -1474,7 +1542,11 @@ export default function App() {
           .order('created_at', { ascending: true });
 
         if (!error && data) {
-          setMessages((data as TeamupMessageRow[]).map(rowToMessage).filter((message) => !isRemovedBotMessage(message)));
+          setMessages(
+            (data as TeamupMessageRow[])
+              .map(rowToMessage)
+              .filter((message) => !isRemovedBotMessage(message) && isMessageAfterClear(message, clearChatTimes)),
+          );
           return;
         }
       }
@@ -1485,7 +1557,8 @@ export default function App() {
       try {
         setMessages(
           (JSON.parse(saved) as ChatMessage[]).filter(
-            (message) => message.profileId === chatId && !isRemovedBotMessage(message),
+            (message) =>
+              message.profileId === chatId && !isRemovedBotMessage(message) && isMessageAfterClear(message, clearChatTimes),
           ),
         );
       } catch {
@@ -1494,17 +1567,37 @@ export default function App() {
     }
 
     loadMessages();
-  }, [openChatId]);
+  }, [clearChatTimes, openChatId]);
 
   const matches = useMemo(
     () =>
       people
         .filter((player) => !user || player.ownerId !== user.id)
+        .filter((player) => !reportedIds.includes(player.id) && !blockedIds.includes(player.id))
         .filter((player) => profileMatchesSearch(player, profileSearch))
+        .filter((player) => !filterGame.trim() || sameText(player.game, filterGame))
+        .filter((player) => !filterLanguage.trim() || sameText(player.language, filterLanguage))
+        .filter((player) => filterMic === 'any' || player.mic === (filterMic === 'yes'))
+        .filter((player) => !filterAgeMin || player.age >= Number(filterAgeMin))
+        .filter((player) => !filterAgeMax || player.age <= Number(filterAgeMax))
         .filter((player) => !contactsOnly || contactIds.includes(player.id))
         .map((player) => ({ ...player, match: scorePlayer(player, profile) }))
         .sort((a, b) => b.match - a.match),
-    [contactIds, contactsOnly, people, profile, profileSearch, user],
+    [
+      blockedIds,
+      contactIds,
+      contactsOnly,
+      filterAgeMax,
+      filterAgeMin,
+      filterGame,
+      filterLanguage,
+      filterMic,
+      people,
+      profile,
+      profileSearch,
+      reportedIds,
+      user,
+    ],
   );
 
   const myProfiles = useMemo(
@@ -1536,9 +1629,20 @@ export default function App() {
         player: people.find((person) => person.id === profileId),
         profileId,
       }))
+      .filter((item) => !blockedIds.includes(item.profileId) && !reportedIds.includes(item.profileId))
       .filter((item) => item.player)
       .sort((a, b) => new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime());
-  }, [allMessages, people]);
+  }, [allMessages, blockedIds, people, reportedIds]);
+
+  const unreadChatCount = useMemo(
+    () =>
+      chatSummaries.filter(({ profileId, lastMessage }) => {
+        if (lastMessage.authorEmail === (user?.email ?? '')) return false;
+        const readAt = readChatTimes[profileId];
+        return !readAt || new Date(lastMessage.createdAt).getTime() > new Date(readAt).getTime();
+      }).length,
+    [chatSummaries, readChatTimes, user],
+  );
 
   function updateProfile<Key extends keyof Profile>(field: Key, value: Profile[Key]) {
     setProfile((current) => ({ ...current, [field]: value }));
@@ -1589,9 +1693,50 @@ export default function App() {
     });
   }
 
+  function markChatRead(id: string) {
+    setReadChatTimes((current) => {
+      const next = { ...current, [id]: new Date().toISOString() };
+      localStorage.setItem(CHAT_READS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
   function toggleChat(id: string) {
     setChatNotice('');
-    setOpenChatId((current) => (current === id ? null : id));
+    setOpenChatId((current) => {
+      const next = current === id ? null : id;
+      if (next) markChatRead(next);
+      return next;
+    });
+  }
+
+  function clearChat(id: string) {
+    const clearedAt = new Date().toISOString();
+    setClearChatTimes((current) => {
+      const next = { ...current, [id]: clearedAt };
+      localStorage.setItem(CHAT_CLEARS_KEY, JSON.stringify(next));
+      return next;
+    });
+    setMessages([]);
+    setAllMessages((current) => current.filter((message) => message.profileId !== id));
+  }
+
+  function blockProfile(id: string) {
+    setBlockedIds((current) => {
+      const next = current.includes(id) ? current : [...current, id];
+      localStorage.setItem(BLOCKED_KEY, JSON.stringify(next));
+      return next;
+    });
+    setOpenChatId((current) => (current === id ? null : current));
+  }
+
+  function reportProfile(id: string) {
+    setReportedIds((current) => {
+      const next = current.includes(id) ? current : [...current, id];
+      localStorage.setItem(REPORTS_KEY, JSON.stringify(next));
+      return next;
+    });
+    setOpenChatId((current) => (current === id ? null : current));
   }
 
   async function sendChatMessage(profileId: string) {
@@ -1818,6 +1963,15 @@ export default function App() {
           </div>
         </div>
 
+        <div className="chat-tools">
+          <button type="button" onClick={() => clearChat(player.id)}>
+            {extraUi.clearChat}
+          </button>
+          <button type="button" onClick={() => blockProfile(player.id)}>
+            {extraUi.block}
+          </button>
+        </div>
+
         <div className="chat-messages">
           {messages.length === 0 ? (
             <p className="chat-empty">{t.emptyChat}</p>
@@ -1922,6 +2076,7 @@ export default function App() {
           onClick={() => openPage('chats')}
         >
           {t.navChats}
+          {unreadChatCount > 0 && <span className="nav-badge">{unreadChatCount}</span>}
         </button>
         <button
           type="button"
@@ -2291,6 +2446,56 @@ export default function App() {
             <span>{t.favoritesOnly}</span>
           </label>
 
+          <div className="advanced-filters">
+            <label>
+              {t.game}
+              <input
+                list="games"
+                placeholder={t.gamePlaceholder}
+                value={filterGame}
+                onChange={(event) => setFilterGame(event.target.value)}
+              />
+            </label>
+            <label>
+              {t.communicationLanguage}
+              <input
+                list="languages"
+                placeholder={t.languagePlaceholder}
+                value={filterLanguage}
+                onChange={(event) => setFilterLanguage(event.target.value)}
+              />
+            </label>
+            <label>
+              {t.age}
+              <div className="range-fields">
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder="1"
+                  value={filterAgeMin}
+                  onChange={(event) => setFilterAgeMin(normalizeAge(event.target.value))}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder="100"
+                  value={filterAgeMax}
+                  onChange={(event) => setFilterAgeMax(normalizeAge(event.target.value))}
+                />
+              </div>
+            </label>
+            <label>
+              {t.mic}
+              <select value={filterMic} onChange={(event) => setFilterMic(event.target.value)}>
+                <option value="any">{t.any}</option>
+                <option value="yes">{t.yes}</option>
+                <option value="no">{t.no}</option>
+              </select>
+            </label>
+          </div>
+
           <section className="events-board">
             <div className="section-title">
               <span>04</span>
@@ -2376,6 +2581,9 @@ export default function App() {
                     <b>{t.detailsOnline}:</b> {label(player.time, activeUiLanguage)}
                   </span>
                   <span>
+                    <b>{extraUi.status}:</b> {getPresenceStatus(player, activeUiLanguage)}
+                  </span>
+                  <span>
                     <b>{t.detailsMic}:</b> {player.mic ? t.yes.toLowerCase() : t.no.toLowerCase()}
                   </span>
                   <span>
@@ -2407,6 +2615,12 @@ export default function App() {
                     </button>
                     <button className="contact-action" type="button" onClick={() => toggleContact(player.id)}>
                       {contactIds.includes(player.id) ? t.removeFavorite : t.addFavorite}
+                    </button>
+                    <button className="ghost-action" type="button" onClick={() => reportProfile(player.id)}>
+                      {extraUi.report}
+                    </button>
+                    <button className="ghost-action" type="button" onClick={() => blockProfile(player.id)}>
+                      {extraUi.block}
                     </button>
                   </>
                 )}
@@ -2538,6 +2752,7 @@ export default function App() {
                       className="chat-thread__button"
                       onClick={() => {
                         setOpenChatId(profileId);
+                        markChatRead(profileId);
                         setChatNotice('');
                       }}
                     >
@@ -2554,6 +2769,11 @@ export default function App() {
                           minute: '2-digit',
                         })}
                       </span>
+                      {lastMessage.authorEmail !== (user?.email ?? '') &&
+                        (!readChatTimes[profileId] ||
+                          new Date(lastMessage.createdAt).getTime() > new Date(readChatTimes[profileId]).getTime()) && (
+                          <span className="unread-dot">{extraUi.unread}</span>
+                        )}
                     </button>
 
                     {openChatId === profileId && renderChatBox(chatPlayer)}

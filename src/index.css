@@ -190,6 +190,20 @@ textarea {
   opacity: 0.48;
 }
 
+.nav-badge,
+.unread-dot {
+  display: inline-grid;
+  min-width: 20px;
+  min-height: 20px;
+  place-items: center;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .hero {
   position: relative;
   height: 100%;
@@ -946,6 +960,23 @@ textarea {
   margin-top: 12px;
 }
 
+.advanced-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--accent) 7%);
+}
+
+.range-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .events-board {
   display: none;
   gap: 12px;
@@ -1545,6 +1576,21 @@ button:hover {
   font-weight: 800;
 }
 
+.chat-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-tools button {
+  min-height: 30px;
+  padding: 6px 10px;
+  border-color: color-mix(in srgb, var(--line) 72%, var(--accent));
+  background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%);
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .chat-messages {
   display: flex;
   flex-direction: column;
@@ -1926,6 +1972,7 @@ button:hover {
 
   .form-grid,
   .details-list,
+  .advanced-filters,
   .chat-compose {
     grid-template-columns: 1fr;
   }
