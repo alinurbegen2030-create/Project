@@ -172,6 +172,21 @@ const authExtraCopy: Record<SupportedUiLanguage, Record<string, string>> = {
 
 const NAME_PREFIXES = ['Team', 'Pixel', 'Nova', 'Game', 'Turbo', 'Shadow', 'Star', 'Quest', 'Rocket', 'Cyber'];
 const NAME_SUFFIXES = ['Player', 'Mate', 'Hero', 'Gamer', 'Hunter', 'Builder', 'Runner', 'Ninja', 'Wizard', 'Rider'];
+const OAUTH_OPTIONS: { provider: OAuthProvider; labelKey: string }[] = [
+  { provider: 'google', labelKey: 'continueWithGoogle' },
+  { provider: 'github', labelKey: 'continueWithGithub' },
+  { provider: 'discord', labelKey: 'continueWithDiscord' },
+];
+const ENABLED_OAUTH_PROVIDERS = new Set(
+  ((import.meta.env.VITE_ENABLED_OAUTH_PROVIDERS as string | undefined) ?? '')
+    .split(',')
+    .map((provider) => provider.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+function isOAuthProviderEnabled(provider: OAuthProvider) {
+  return ENABLED_OAUTH_PROVIDERS.has(provider);
+}
 
 function makeSuggestedUsername() {
   const prefix = NAME_PREFIXES[Math.floor(Math.random() * NAME_PREFIXES.length)];
@@ -250,6 +265,7 @@ export function Auth({
   onVisualProfileChange,
 }: AuthProps) {
   const copy = { ...authCopy[language], ...authExtraCopy[language] };
+  const oauthOptions = OAUTH_OPTIONS.filter((option) => isOAuthProviderEnabled(option.provider));
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -311,6 +327,11 @@ export function Auth({
   }
 
   async function signInWithOAuth(provider: OAuthProvider) {
+    if (!isOAuthProviderEnabled(provider)) {
+      setMessage('Этот вход пока не включен в Supabase.');
+      return;
+    }
+
     if (!supabase) {
       setMessage(copy.noSupabase);
       return;
@@ -561,20 +582,23 @@ export function Auth({
           {busy ? copy.wait : mode === 'signin' ? copy.signIn : copy.signUp}
         </button>
 
-        <div className="oauth-block">
-          <span>{copy.oauthTitle}</span>
-          <div className="oauth-buttons">
-            <button type="button" disabled={busy} onClick={() => signInWithOAuth('google')}>
-              {copy.continueWithGoogle}
-            </button>
-            <button type="button" disabled={busy} onClick={() => signInWithOAuth('github')}>
-              {copy.continueWithGithub}
-            </button>
-            <button type="button" disabled={busy} onClick={() => signInWithOAuth('discord')}>
-              {copy.continueWithDiscord}
-            </button>
+        {oauthOptions.length > 0 && (
+          <div className="oauth-block">
+            <span>{copy.oauthTitle}</span>
+            <div className="oauth-buttons">
+              {oauthOptions.map((option) => (
+                <button
+                  key={option.provider}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => signInWithOAuth(option.provider)}
+                >
+                  {copy[option.labelKey]}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </form>
 
       {notice && !message && <p className="message">{notice}</p>}
