@@ -1051,7 +1051,13 @@ function isTestProfile(player: Player) {
 }
 
 function isRemovedBotMessage(message: ChatMessage) {
-  return message.profileId.startsWith('teamup-ai-') || message.authorEmail.toLowerCase().includes('ai bot');
+  const author = message.authorEmail.toLowerCase();
+  return (
+    message.profileId === '00000000-0000-4000-8000-000000000777' ||
+    message.profileId.startsWith('teamup-ai-') ||
+    author.includes('ai bot') ||
+    author.includes('@teamup_ai')
+  );
 }
 
 function getStoredMessages() {
@@ -1365,8 +1371,11 @@ export default function App() {
 
     try {
       const parsedContacts = JSON.parse(savedContacts) as string[];
-      setContactIds(parsedContacts);
-      localStorage.setItem(CONTACTS_KEY, JSON.stringify(parsedContacts));
+      const cleanedContacts = parsedContacts.filter(
+        (contactId) => contactId !== '00000000-0000-4000-8000-000000000777' && !contactId.startsWith('teamup-ai-'),
+      );
+      setContactIds(cleanedContacts);
+      localStorage.setItem(CONTACTS_KEY, JSON.stringify(cleanedContacts));
     } catch {
       localStorage.removeItem(CONTACTS_KEY);
     }
@@ -1395,7 +1404,7 @@ export default function App() {
           .order('created_at', { ascending: true });
 
         if (!error && data) {
-          setAllMessages((data as TeamupMessageRow[]).map(rowToMessage));
+          setAllMessages((data as TeamupMessageRow[]).map(rowToMessage).filter((message) => !isRemovedBotMessage(message)));
           return;
         }
       }
@@ -1480,7 +1489,7 @@ export default function App() {
           .order('created_at', { ascending: true });
 
         if (!error && data) {
-          setMessages((data as TeamupMessageRow[]).map(rowToMessage));
+          setMessages((data as TeamupMessageRow[]).map(rowToMessage).filter((message) => !isRemovedBotMessage(message)));
           return;
         }
       }
@@ -1489,7 +1498,11 @@ export default function App() {
       if (!saved) return;
 
       try {
-        setMessages((JSON.parse(saved) as ChatMessage[]).filter((message) => message.profileId === chatId));
+        setMessages(
+          (JSON.parse(saved) as ChatMessage[]).filter(
+            (message) => message.profileId === chatId && !isRemovedBotMessage(message),
+          ),
+        );
       } catch {
         localStorage.removeItem(MESSAGES_KEY);
       }
