@@ -534,6 +534,7 @@ textarea {
 .workspace {
   display: grid;
   grid-template-columns: 430px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   align-items: start;
   gap: 22px;
   height: 100%;
@@ -544,6 +545,36 @@ textarea {
 .workspace[hidden],
 .is-hidden {
   display: none;
+}
+
+.page-header {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-bg) 92%, var(--accent) 8%);
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.08);
+}
+
+.page-header span {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 42px);
+}
+
+.page-header p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .workspace--profile {

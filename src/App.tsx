@@ -131,6 +131,13 @@ type TeamupReviewRow = {
   created_at: string;
 };
 
+const appPages: AppPage[] = ['home', 'matches', 'profile', 'chats', 'reviews'];
+
+function getPageFromHash(): AppPage {
+  const hashPage = window.location.hash.replace('#', '') as AppPage;
+  return appPages.includes(hashPage) ? hashPage : 'home';
+}
+
 type TeamupUserSettingsRow = {
   user_id: string;
   display_name: string;
@@ -1307,10 +1314,11 @@ export default function App() {
   const [people, setPeople] = useState<Player[]>(demoPlayers);
   const [saveMessage, setSaveMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(!supabase);
   const [visualProfile, setVisualProfile] = useState<UserVisualProfile | null>(null);
   const [authNotice, setAuthNotice] = useState('');
   const [theme, setTheme] = useState<DesignTheme>('neon');
-  const [activePage, setActivePage] = useState<AppPage>('home');
+  const [activePage, setActivePage] = useState<AppPage>(() => getPageFromHash());
   const [profileSearch, setProfileSearch] = useState('');
   const [filterGame, setFilterGame] = useState('');
   const [filterLanguage, setFilterLanguage] = useState('');
@@ -1352,16 +1360,61 @@ export default function App() {
     clearChat: activeUiLanguage === 'en' ? 'Clear chat' : 'Очистить чат',
     unread: activeUiLanguage === 'en' ? 'new' : 'новое',
   };
+  const pageInfo: Record<AppPage, { title: string; text: string }> = {
+    home: {
+      title: t.navHome,
+      text: activeUiLanguage === 'en' ? 'Start here.' : 'Начальная страница.',
+    },
+    matches: {
+      title: t.navMatches,
+      text:
+        activeUiLanguage === 'en'
+          ? 'Search, filter, save contacts, report, block, and open chats.'
+          : 'Ищи игроков, фильтруй анкеты, добавляй контакты, жалуйся, блокируй и открывай чаты.',
+    },
+    profile: {
+      title: t.navProfile,
+      text:
+        activeUiLanguage === 'en'
+          ? 'Create or update your own teammate profile.'
+          : 'Создай или измени свою анкету для поиска напарников.',
+    },
+    chats: {
+      title: t.navChats,
+      text: activeUiLanguage === 'en' ? 'All conversations are collected here.' : 'Все переписки собраны здесь.',
+    },
+    reviews: {
+      title: t.navReviews,
+      text:
+        activeUiLanguage === 'en'
+          ? 'Leave feedback about TeamUp and read other reviews.'
+          : 'Оставь отзыв о TeamUp и посмотри отзывы других.',
+    },
+  };
 
   useEffect(() => {
     if (!supabase) return;
 
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setAuthReady(true);
+    });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setAuthReady(true);
     });
 
     return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    function syncPageFromHash() {
+      setActivePage(getPageFromHash());
+    }
+
+    syncPageFromHash();
+    window.addEventListener('hashchange', syncPageFromHash);
+    return () => window.removeEventListener('hashchange', syncPageFromHash);
   }, []);
 
   useEffect(() => {
@@ -1401,11 +1454,14 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!user && activePage !== 'home') {
+      if (window.location.hash !== '#home') window.location.hash = 'home';
       setActivePage('home');
       setAuthNotice(t.loginRequired);
     }
-  }, [activePage, t.loginRequired, user]);
+  }, [activePage, authReady, t.loginRequired, user]);
 
   useEffect(() => {
     const savedContacts = localStorage.getItem(CONTACTS_KEY) ?? localStorage.getItem('teamup-favorite-profile-ids');
@@ -1927,6 +1983,7 @@ export default function App() {
 
   function openPage(page: AppPage) {
     if (!user && page !== 'home') {
+      if (window.location.hash !== '#home') window.location.hash = 'home';
       setActivePage('home');
       setAuthNotice(t.loginRequired);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1934,6 +1991,9 @@ export default function App() {
     }
 
     setAuthNotice('');
+    if (window.location.hash !== `#${page}`) {
+      window.location.hash = page;
+    }
     setActivePage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -2169,6 +2229,12 @@ export default function App() {
       </section>
 
       <section className={`workspace workspace--${activePage}`} hidden={activePage === 'home'}>
+        <header className="page-header">
+          <span>TeamUp</span>
+          <h1>{pageInfo[activePage].title}</h1>
+          <p>{pageInfo[activePage].text}</p>
+        </header>
+
         <div className="sidebar-stack">
         <div ref={authPanelRef}>
           <Auth
