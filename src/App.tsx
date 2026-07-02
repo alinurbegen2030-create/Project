@@ -920,6 +920,7 @@ const avatarShopItems = [
   { id: 'icon-ghost', icon: 'GH', title: 'Ghost', price: 170 },
 ];
 const backgroundShopItems = [
+  { id: 'bg-classic', title: 'Classic', price: 0 },
   { id: 'bg-aurora', title: 'Aurora', price: 80 },
   { id: 'bg-cyber', title: 'Cyber', price: 90 },
   { id: 'bg-ocean', title: 'Ocean', price: 90 },
@@ -927,6 +928,13 @@ const backgroundShopItems = [
   { id: 'bg-forest', title: 'Forest', price: 100 },
   { id: 'bg-galaxy', title: 'Galaxy', price: 130 },
   { id: 'bg-lava', title: 'Lava', price: 150 },
+  { id: 'bg-ice', title: 'Ice', price: 110 },
+  { id: 'bg-candy', title: 'Candy', price: 120 },
+  { id: 'bg-shadow', title: 'Shadow', price: 140 },
+  { id: 'bg-gold', title: 'Gold', price: 160 },
+  { id: 'bg-matrix', title: 'Matrix', price: 170 },
+  { id: 'bg-royal', title: 'Royal', price: 190 },
+  { id: 'bg-glitch', title: 'Glitch', price: 210 },
 ];
 const questDifficulties = [
   { id: 'easy', ru: 'Легкий', en: 'Easy', reward: 25, count: 40 },
@@ -3056,7 +3064,7 @@ export default function App() {
           <h3>{extraUi.backgrounds}</h3>
           <div className="shop-grid">
             {backgroundShopItems.map((item) => {
-              const owned = shopState.ownedItems.includes(item.id);
+              const owned = item.price === 0 || shopState.ownedItems.includes(item.id);
               const active = shopState.activeBackground === item.id;
 
               return (

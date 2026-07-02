@@ -687,6 +687,7 @@ textarea {
   border: 1px solid rgba(255, 255, 255, 0.55);
 }
 
+.bg-classic { background: linear-gradient(135deg, #ffffff, #f1f4f7); }
 .bg-aurora { background: linear-gradient(135deg, #22c55e, #06b6d4, #a855f7); }
 .bg-cyber { background: linear-gradient(135deg, #0f172a, #14b8a6, #f43f5e); }
 .bg-ocean { background: linear-gradient(135deg, #0284c7, #0ea5e9, #ccfbf1); }
@@ -694,6 +695,13 @@ textarea {
 .bg-forest { background: linear-gradient(135deg, #14532d, #22c55e, #facc15); }
 .bg-galaxy { background: linear-gradient(135deg, #111827, #7c3aed, #06b6d4); }
 .bg-lava { background: linear-gradient(135deg, #7f1d1d, #ef4444, #f59e0b); }
+.bg-ice { background: linear-gradient(135deg, #e0f2fe, #38bdf8, #818cf8); }
+.bg-candy { background: linear-gradient(135deg, #f9a8d4, #f0abfc, #fde68a); }
+.bg-shadow { background: linear-gradient(135deg, #020617, #334155, #64748b); }
+.bg-gold { background: linear-gradient(135deg, #78350f, #f59e0b, #fde68a); }
+.bg-matrix { background: linear-gradient(135deg, #052e16, #16a34a, #bbf7d0); }
+.bg-royal { background: linear-gradient(135deg, #1e1b4b, #4f46e5, #c084fc); }
+.bg-glitch { background: linear-gradient(135deg, #111827 0 35%, #06b6d4 35% 52%, #f43f5e 52% 70%, #facc15 70%); }
 
 .quest-list {
   display: grid;
@@ -725,6 +733,7 @@ textarea {
 .quest-difficulty--impossible { background: #7c2d12; }
 .quest-difficulty--secret { background: #7c3aed; }
 
+.app-shell[data-shop-bg="bg-classic"] { background-image: none; }
 .app-shell[data-shop-bg="bg-aurora"] { background-image: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(6, 182, 212, 0.18), rgba(168, 85, 247, 0.16)); }
 .app-shell[data-shop-bg="bg-cyber"] { background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.24), rgba(20, 184, 166, 0.18), rgba(244, 63, 94, 0.16)); }
 .app-shell[data-shop-bg="bg-ocean"] { background-image: linear-gradient(135deg, rgba(2, 132, 199, 0.2), rgba(14, 165, 233, 0.18), rgba(204, 251, 241, 0.22)); }
@@ -732,6 +741,13 @@ textarea {
 .app-shell[data-shop-bg="bg-forest"] { background-image: linear-gradient(135deg, rgba(20, 83, 45, 0.18), rgba(34, 197, 94, 0.16), rgba(250, 204, 21, 0.16)); }
 .app-shell[data-shop-bg="bg-galaxy"] { background-image: linear-gradient(135deg, rgba(17, 24, 39, 0.22), rgba(124, 58, 237, 0.18), rgba(6, 182, 212, 0.15)); }
 .app-shell[data-shop-bg="bg-lava"] { background-image: linear-gradient(135deg, rgba(127, 29, 29, 0.2), rgba(239, 68, 68, 0.16), rgba(245, 158, 11, 0.16)); }
+.app-shell[data-shop-bg="bg-ice"] { background-image: linear-gradient(135deg, rgba(224, 242, 254, 0.42), rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.16)); }
+.app-shell[data-shop-bg="bg-candy"] { background-image: linear-gradient(135deg, rgba(249, 168, 212, 0.22), rgba(240, 171, 252, 0.2), rgba(253, 230, 138, 0.22)); }
+.app-shell[data-shop-bg="bg-shadow"] { background-image: linear-gradient(135deg, rgba(2, 6, 23, 0.22), rgba(51, 65, 85, 0.2), rgba(100, 116, 139, 0.16)); }
+.app-shell[data-shop-bg="bg-gold"] { background-image: linear-gradient(135deg, rgba(120, 53, 15, 0.2), rgba(245, 158, 11, 0.22), rgba(253, 230, 138, 0.2)); }
+.app-shell[data-shop-bg="bg-matrix"] { background-image: linear-gradient(135deg, rgba(5, 46, 22, 0.2), rgba(22, 163, 74, 0.2), rgba(187, 247, 208, 0.2)); }
+.app-shell[data-shop-bg="bg-royal"] { background-image: linear-gradient(135deg, rgba(30, 27, 75, 0.22), rgba(79, 70, 229, 0.18), rgba(192, 132, 252, 0.18)); }
+.app-shell[data-shop-bg="bg-glitch"] { background-image: linear-gradient(135deg, rgba(17, 24, 39, 0.22) 0 35%, rgba(6, 182, 212, 0.16) 35% 52%, rgba(244, 63, 94, 0.16) 52% 70%, rgba(250, 204, 21, 0.16) 70%); }
 
 .sidebar-stack {
   display: grid;
