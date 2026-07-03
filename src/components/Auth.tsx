@@ -20,6 +20,54 @@ type UserVisualProfile = {
   icon: string;
 };
 
+const avatarEffectByIcon: Record<string, string> = {
+  CR: 'crown',
+  FR: 'fire',
+  DM: 'diamond',
+  GH: 'ghost',
+  NT: 'nitro',
+  ST: 'star',
+  LT: 'lightning',
+  SH: 'shield',
+  MO: 'moon',
+  PX: 'pixel',
+  RG: 'ring',
+  WG: 'wings',
+  CM: 'comet',
+  GL: 'glitch',
+  OR: 'orbit',
+  PT: 'portal',
+  SK: 'sakura',
+  CY: 'crystal',
+  SM: 'smoke',
+  VX: 'vortex',
+  BB: 'bubble',
+  SP: 'spark',
+  HL: 'halo',
+  DG: 'dragon',
+};
+
+function renderVisualIcon(icon: string) {
+  const effect = avatarEffectByIcon[icon];
+
+  if (icon.startsWith('data:image/')) {
+    return (
+      <span className="animated-avatar animated-avatar--image">
+        <img src={icon} alt="" />
+      </span>
+    );
+  }
+
+  if (!effect) return <span className="animated-avatar">{icon}</span>;
+
+  return (
+    <span className={`animated-avatar shop-icon--${effect}`} aria-label={icon}>
+      <span className="shop-avatar-base">TU</span>
+      <span className="shop-avatar-effect">{icon}</span>
+    </span>
+  );
+}
+
 const authCopy: Record<SupportedUiLanguage, Record<string, string>> = {
   ru: {
     account: 'Аккаунт',
@@ -44,6 +92,7 @@ const authCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     userExists: 'Такой аккаунт уже есть. Нажми "Войти".',
     rateLimit: 'Слишком много попыток. Подожди немного и попробуй снова.',
     signInFailed: 'Не удалось войти.',
+    emailNotConfirmed: 'Email не подтвержден. Если входишь по имени, напиши мне: нужно выключить подтверждение email в Supabase.',
     writeName: 'Напиши имя.',
     noSupabase: 'База пока не подключена. Вход заработает после подключения Supabase.',
     created: 'Аккаунт создан. Вход выполнен.',
@@ -74,6 +123,7 @@ const authCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     userExists: 'Мұндай аккаунт бар. "Кіру" батырмасын бас.',
     rateLimit: 'Әрекет тым көп. Біраз күтіп, қайта көр.',
     signInFailed: 'Кіру мүмкін болмады.',
+    emailNotConfirmed: 'Email расталмаған. Атымен кірсең, Supabase ішінде email растауды өшіру керек.',
     writeName: 'Атыңды жаз.',
     noSupabase: 'База әлі қосылмаған. Supabase қосылғаннан кейін кіру жұмыс істейді.',
     created: 'Аккаунт жасалды. Кіру орындалды.',
@@ -104,6 +154,7 @@ const authCopy: Record<SupportedUiLanguage, Record<string, string>> = {
     userExists: 'This account already exists. Press "Sign in".',
     rateLimit: 'Too many attempts. Wait a bit and try again.',
     signInFailed: 'Could not sign in.',
+    emailNotConfirmed: 'Email is not confirmed. For username login, disable email confirmation in Supabase.',
     writeName: 'Type a name.',
     noSupabase: 'The database is not connected yet. Sign-in will work after Supabase is connected.',
     created: 'Account created. You are signed in.',
@@ -177,8 +228,9 @@ const OAUTH_OPTIONS: { provider: OAuthProvider; labelKey: string }[] = [
   { provider: 'github', labelKey: 'continueWithGithub' },
   { provider: 'discord', labelKey: 'continueWithDiscord' },
 ];
+const ENABLE_EXTERNAL_OAUTH = true;
 const ENABLED_OAUTH_PROVIDERS = new Set(
-  ((import.meta.env.VITE_ENABLED_OAUTH_PROVIDERS as string | undefined) ?? '')
+  (ENABLE_EXTERNAL_OAUTH ? (import.meta.env.VITE_ENABLED_OAUTH_PROVIDERS as string | undefined) ?? '' : '')
     .split(',')
     .map((provider) => provider.trim().toLowerCase())
     .filter(Boolean)
@@ -249,6 +301,7 @@ function friendlyAuthError(message: string, copy: Record<string, string>) {
 
   if (lowerMessage.includes('invalid login credentials')) return copy.invalidCredentials;
   if (lowerMessage.includes('user already registered')) return copy.userExists;
+  if (lowerMessage.includes('email not confirmed')) return copy.emailNotConfirmed;
   if (lowerMessage.includes('email rate limit')) {
     return copy.rateLimit;
   }
@@ -286,7 +339,7 @@ export function Auth({
 
     setVisualNameDraft(visualProfile?.displayName ?? displayNameFromEmail(user.email));
     setIconDraft(visualProfile?.icon ?? iconOptions[0] ?? 'TU');
-  }, [iconOptions, user, visualProfile]);
+  }, [user, visualProfile]);
 
   async function refreshSuggestedUsername() {
     setSuggestionBusy(true);
@@ -323,6 +376,40 @@ export function Auth({
     }
 
     setMessage(friendlyAuthError(lastError || copy.signInFailed, copy));
+    return false;
+  }
+
+  async function createAccount() {
+    const email = getAuthEmailOptions()[0];
+    const displayName = username.trim();
+    const { data, error } = await supabase!.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: displayName,
+          user_name: displayName,
+        },
+      },
+    });
+
+    if (error) {
+      setMessage(friendlyAuthError(error.message, copy));
+      void refreshSuggestedUsername();
+      return false;
+    }
+
+    if (data.session) {
+      setMessage(copy.created);
+      return true;
+    }
+
+    const signedIn = await signInWithPassword();
+    if (signedIn) {
+      setMessage(copy.created);
+      return true;
+    }
+
     return false;
   }
 
@@ -373,22 +460,19 @@ export function Auth({
 
     try {
       if (mode === 'signup') {
-        const email = getAuthEmailOptions()[0];
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
-
-        if (signUpError) {
-          setMessage(friendlyAuthError(signUpError.message, copy));
-          void refreshSuggestedUsername();
-          return;
-        }
-
-        const signedIn = await signInWithPassword();
-        if (signedIn) setMessage(copy.created);
+        await createAccount();
         return;
       }
 
       const signedIn = await signInWithPassword();
-      if (signedIn) setMessage(copy.signedIn);
+      if (signedIn) {
+        setMessage(copy.signedIn);
+        return;
+      }
+
+      if (authMethod === 'username') {
+        await createAccount();
+      }
     } catch {
       setMessage(copy.unknownError);
     } finally {
@@ -437,15 +521,13 @@ export function Auth({
   }
 
   if (user) {
-    const previewIcon = visualProfile?.icon ?? iconDraft;
+    const previewIcon = iconDraft;
 
     return (
       <section className="panel auth-panel">
         <h2>{copy.account}</h2>
         <div className="account-preview">
-          <span>
-            {previewIcon.startsWith('data:image/') ? <img src={previewIcon} alt="" /> : previewIcon}
-          </span>
+          {renderVisualIcon(previewIcon)}
           <div>
             <b>{visualProfile?.displayName || visualNameDraft || displayNameFromEmail(user.email)}</b>
             <small>{copy.realLoginName}: {displayNameFromEmail(user.email)}</small>

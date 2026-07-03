@@ -10,9 +10,7 @@
     "db:login": "supabase login",
     "db:link": "supabase link",
     "db:new": "supabase migration new",
-    "db:push": "supabase db push",
-    "ai:secret": "supabase secrets set",
-    "ai:deploy": "supabase functions deploy ai"
+    "db:push": "supabase db push"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

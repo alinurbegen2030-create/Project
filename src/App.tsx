@@ -6,7 +6,7 @@ import { supabase } from './lib/supabase';
 type SupportedUiLanguage = 'ru' | 'kk' | 'en';
 type DesignTheme = 'neon' | 'arena' | 'pixel';
 type AppPage = 'home' | 'games' | 'matches' | 'profile' | 'player' | 'chats' | 'reviews' | 'shop';
-type ShopTab = 'avatars' | 'quests';
+type ShopTab = 'avatars' | 'quests' | 'inventory';
 
 type UserVisualProfile = {
   displayName: string;
@@ -934,7 +934,10 @@ const CHAT_CLEARS_KEY = 'teamup-chat-clear-times';
 const SHOP_KEY = 'teamup-shop-state';
 const PRIVATE_CONTACTS_KEY = 'teamup-private-contact-profile-ids';
 const REPUTATION_KEY = 'teamup-player-reputation';
+const PLAYER_STATUS_KEY = 'teamup-player-status';
+const AUTO_TRANSLATE_KEY = 'teamup-auto-translate-language';
 const STARTER_XP = 1_200;
+const playerStatuses = ['Ищу тиммейта', 'В игре', 'Не беспокоить', 'Онлайн'];
 const userIconOptions = ['TU', 'GG', 'XP', 'LV', 'HP', 'VR'];
 const profileColors = ['#e25555', '#2f9d68', '#e6a13d', '#6c63d9', '#3c7dd9', '#111827'];
 const avatarShopItems = [
@@ -962,6 +965,42 @@ const avatarShopItems = [
   { id: 'icon-spark', icon: 'SP', title: 'Spark Pack', price: 3100 },
   { id: 'icon-halo', icon: 'HL', title: 'Halo', price: 4400 },
   { id: 'icon-dragon', icon: 'DG', title: 'Dragon Flame', price: 6200 },
+  { id: 'icon-royal-crown', icon: 'RC', title: 'Royal Crown', price: 6800 },
+  { id: 'icon-solar-fire', icon: 'SF', title: 'Solar Fire', price: 7200 },
+  { id: 'icon-blue-diamond', icon: 'BD', title: 'Blue Diamond', price: 5400 },
+  { id: 'icon-phantom', icon: 'PH', title: 'Phantom', price: 3900 },
+  { id: 'icon-nitro-pulse', icon: 'NP', title: 'Nitro Pulse', price: 5600 },
+  { id: 'icon-golden-star', icon: 'GS', title: 'Golden Star', price: 3300 },
+  { id: 'icon-thunder', icon: 'TH', title: 'Thunder', price: 4100 },
+  { id: 'icon-emerald-shield', icon: 'ES', title: 'Emerald Shield', price: 4700 },
+  { id: 'icon-eclipse', icon: 'EC', title: 'Eclipse', price: 3600 },
+  { id: 'icon-retro-frame', icon: 'RF', title: 'Retro Frame', price: 2900 },
+  { id: 'icon-prismatic-ring', icon: 'PR', title: 'Prismatic Ring', price: 5200 },
+  { id: 'icon-angel-wings', icon: 'AW', title: 'Angel Wings', price: 6400 },
+  { id: 'icon-meteor', icon: 'MT', title: 'Meteor', price: 5800 },
+  { id: 'icon-error-core', icon: 'ER', title: 'Error Core', price: 4900 },
+  { id: 'icon-green-orbit', icon: 'GO', title: 'Green Orbit', price: 4300 },
+  { id: 'icon-purple-portal', icon: 'PP', title: 'Purple Portal', price: 6100 },
+  { id: 'icon-pink-sakura', icon: 'PK', title: 'Pink Sakura', price: 3700 },
+  { id: 'icon-ice-crystal', icon: 'IC', title: 'Ice Crystal', price: 5900 },
+  { id: 'icon-dark-smoke', icon: 'DS', title: 'Dark Smoke', price: 4500 },
+  { id: 'icon-cosmic-vortex', icon: 'CV', title: 'Cosmic Vortex', price: 7600 },
+  { id: 'icon-glass-bubble', icon: 'GB', title: 'Glass Bubble', price: 3400 },
+  { id: 'icon-neon-spark', icon: 'NS', title: 'Neon Spark', price: 5300 },
+  { id: 'icon-sun-halo', icon: 'SL', title: 'Sun Halo', price: 6200 },
+  { id: 'icon-red-dragon', icon: 'RD', title: 'Red Dragon', price: 8400 },
+  { id: 'icon-obsidian-crown', icon: 'OC', title: 'Obsidian Crown', price: 9100 },
+  { id: 'icon-void-flame', icon: 'VF', title: 'Void Flame', price: 9600 },
+  { id: 'icon-ruby-diamond', icon: 'RB', title: 'Ruby Diamond', price: 8800 },
+  { id: 'icon-ghost-king', icon: 'GK', title: 'Ghost King', price: 7400 },
+  { id: 'icon-hyper-nitro', icon: 'HN', title: 'Hyper Nitro', price: 9900 },
+  { id: 'icon-supernova', icon: 'SN', title: 'Supernova', price: 10200 },
+  { id: 'icon-godspeed', icon: 'GD', title: 'Godspeed', price: 10800 },
+  { id: 'icon-titan-shield', icon: 'TS', title: 'Titan Shield', price: 9300 },
+  { id: 'icon-blood-moon', icon: 'BM', title: 'Blood Moon', price: 7900 },
+  { id: 'icon-mythic-wings', icon: 'MW', title: 'Mythic Wings', price: 11200 },
+  { id: 'icon-black-hole', icon: 'BH', title: 'Black Hole', price: 12500 },
+  { id: 'icon-ancient-dragon', icon: 'AD', title: 'Ancient Dragon', price: 15000 },
 ];
 const backgroundShopItems = [
   { id: 'bg-classic', title: 'Classic', price: 0 },
@@ -983,11 +1022,24 @@ const backgroundShopItems = [
   { id: 'bg-mint', title: 'Mint', price: 125 },
   { id: 'bg-cherry', title: 'Cherry', price: 135 },
   { id: 'bg-dream', title: 'Dream', price: 155 },
+  { id: 'bg-neon-city', title: 'Neon City', price: 220 },
+  { id: 'bg-desert', title: 'Desert', price: 145 },
+  { id: 'bg-volcano', title: 'Volcano', price: 230 },
+  { id: 'bg-night', title: 'Night', price: 175 },
+  { id: 'bg-rainbow', title: 'Rainbow', price: 240 },
+  { id: 'bg-space', title: 'Space', price: 260 },
+  { id: 'bg-toxic', title: 'Toxic', price: 205 },
+  { id: 'bg-snow', title: 'Snow', price: 150 },
+  { id: 'bg-samurai', title: 'Samurai', price: 275 },
+  { id: 'bg-hacker', title: 'Hacker', price: 300 },
+  { id: 'bg-cosmos', title: 'Cosmos', price: 320 },
+  { id: 'bg-diamond', title: 'Diamond', price: 350 },
 ];
 const difficultyCopy = {
   easy: { ru: 'Легкий', en: 'Easy', reward: 50 },
   medium: { ru: 'Средний', en: 'Medium', reward: 90 },
   hard: { ru: 'Сложный', en: 'Hard', reward: 150 },
+  impossible: { ru: 'Экстремальный', en: 'Extreme', reward: 500 },
   secret: { ru: 'Секретный', en: 'Secret', reward: 300 },
 };
 
@@ -1131,7 +1183,7 @@ const filterQuestItems = [
 const completionQuestItems = [5, 10, 15, 20, 30, 40, 50, 60, 75, 90].map((target, index) =>
   makeQuest(
     `quest-complete-${target}`,
-    target < 20 ? 'medium' : target < 60 ? 'hard' : 'secret',
+    target < 20 ? 'medium' : 'hard',
     `Выполни ${target} квестов`,
     `Complete ${target} quests`,
     `Забери награды за ${target} выполненных квестов.`,
@@ -1143,6 +1195,64 @@ const completionQuestItems = [5, 10, 15, 20, 30, 40, 50, 60, 75, 90].map((target
   ),
 );
 
+const secretQuestItems = [
+  makeQuest(
+    'quest-secret-teamup-legend',
+    'secret',
+    'Секрет TeamUp',
+    'TeamUp Secret',
+    'Секретный квест: собери все лучшие MYTH вещи в магазине.',
+    'Secret quest: collect every best MYTH item in the shop.',
+    'all-best-items',
+    1,
+    '',
+    2500,
+  ),
+];
+
+const extremeQuestItems = [
+  makeQuest(
+    'quest-extreme-all-quests',
+    'impossible',
+    'Выполни все квесты',
+    'Complete every quest',
+    'Финальный экстремальный квест: забери награды за все остальные квесты.',
+    'Final extreme quest: claim rewards from every other quest.',
+    'all-quests',
+    1,
+    '',
+    5000,
+  ),
+];
+
+function calculateQuestReward(quest: ReturnType<typeof makeQuest>, index: number) {
+  const difficultyMultiplier: Record<keyof typeof difficultyCopy, number> = {
+    easy: 1,
+    medium: 1.35,
+    hard: 1.9,
+    secret: 4,
+    impossible: 7,
+  };
+  const depthBonus = Math.floor(index / 8) * 90;
+  const bonusByCondition: Record<string, number> = {
+    contacts: quest.target * 30,
+    messages: quest.target * 26,
+    completed: quest.target * 42,
+    'background-active': 180,
+    'avatar-owned': 450,
+    'avatar-equipped': 650,
+    'filter-count': quest.target * 140,
+    'profile-about': quest.target * 12,
+    'all-best-items': 12000,
+    'all-quests': 30000,
+  };
+  const rawReward =
+    (quest.reward + depthBonus + (bonusByCondition[quest.condition] ?? quest.target * 20)) *
+    difficultyMultiplier[quest.difficulty];
+
+  return Math.max(100, Math.round(rawReward / 10) * 10);
+}
+
 const questItems = [
   ...coreQuestItems,
   ...contactQuestItems,
@@ -1152,9 +1262,11 @@ const questItems = [
   ...profileQuestItems,
   ...filterQuestItems,
   ...completionQuestItems,
+  ...secretQuestItems,
+  ...extremeQuestItems,
 ].map((quest, index) => ({
   ...quest,
-  reward: 300 + index * 60,
+  reward: calculateQuestReward(quest, index),
 }));
 const designThemes: Array<{ id: DesignTheme; label: string }> = [
   { id: 'neon', label: 'Neon' },
@@ -1573,7 +1685,135 @@ const avatarEffectByIcon: Record<string, string> = {
   SP: 'spark',
   HL: 'halo',
   DG: 'dragon',
+  RC: 'crown',
+  SF: 'fire',
+  BD: 'diamond',
+  PH: 'ghost',
+  NP: 'nitro',
+  GS: 'star',
+  TH: 'lightning',
+  ES: 'shield',
+  EC: 'moon',
+  RF: 'pixel',
+  PR: 'ring',
+  AW: 'wings',
+  MT: 'comet',
+  ER: 'glitch',
+  GO: 'orbit',
+  PP: 'portal',
+  PK: 'sakura',
+  IC: 'crystal',
+  DS: 'smoke',
+  CV: 'vortex',
+  GB: 'bubble',
+  NS: 'spark',
+  SL: 'halo',
+  RD: 'dragon',
+  OC: 'crown',
+  VF: 'fire',
+  RB: 'diamond',
+  GK: 'ghost',
+  HN: 'nitro',
+  SN: 'star',
+  GD: 'lightning',
+  TS: 'shield',
+  BM: 'moon',
+  MW: 'wings',
+  BH: 'vortex',
+  AD: 'dragon',
 };
+
+const avatarVariantByIcon: Record<string, string> = {
+  RC: 'royal-crown',
+  SF: 'solar-fire',
+  BD: 'blue-diamond',
+  PH: 'phantom',
+  NP: 'nitro-pulse',
+  GS: 'golden-star',
+  TH: 'thunder',
+  ES: 'emerald-shield',
+  EC: 'eclipse',
+  RF: 'retro-frame',
+  PR: 'prismatic-ring',
+  AW: 'angel-wings',
+  MT: 'meteor',
+  ER: 'error-core',
+  GO: 'green-orbit',
+  PP: 'purple-portal',
+  PK: 'pink-sakura',
+  IC: 'ice-crystal',
+  DS: 'dark-smoke',
+  CV: 'cosmic-vortex',
+  GB: 'glass-bubble',
+  NS: 'neon-spark',
+  SL: 'sun-halo',
+  RD: 'red-dragon',
+  OC: 'obsidian-crown',
+  VF: 'void-flame',
+  RB: 'ruby-diamond',
+  GK: 'ghost-king',
+  HN: 'hyper-nitro',
+  SN: 'supernova',
+  GD: 'godspeed',
+  TS: 'titan-shield',
+  BM: 'blood-moon',
+  MW: 'mythic-wings',
+  BH: 'black-hole',
+  AD: 'ancient-dragon',
+};
+
+function getAvatarEffectClass(icon: string, id: string) {
+  return avatarEffectByIcon[icon] ?? id.replace('icon-', '');
+}
+
+function getAvatarVariantClass(icon: string) {
+  return avatarVariantByIcon[icon] ? `shop-item--${avatarVariantByIcon[icon]}` : '';
+}
+
+function getItemRarity(price: number) {
+  if (price >= 5000) return { id: 'mythic', label: 'Mythic', short: 'MYTH' };
+  if (price >= 3800) return { id: 'legendary', label: 'Legendary', short: 'LEG' };
+  if (price >= 2500) return { id: 'epic', label: 'Epic', short: 'EPIC' };
+  if (price >= 1600) return { id: 'rare', label: 'Rare', short: 'RARE' };
+  return { id: 'common', label: 'Common', short: 'COM' };
+}
+
+function getLevelInfo(xp: number, completedQuests: number) {
+  const level = Math.max(1, Math.floor((xp + completedQuests * 120) / 850));
+  const current = (xp + completedQuests * 120) % 850;
+  const progress = Math.round((current / 850) * 100);
+  const rank = level >= 25 ? 'Diamond' : level >= 16 ? 'Gold' : level >= 9 ? 'Silver' : 'Bronze';
+  const rankShort = level >= 25 ? 'DIA' : level >= 16 ? 'GLD' : level >= 9 ? 'SLV' : 'BRZ';
+  return { level, rank, rankShort, progress };
+}
+
+function formatCompactNumber(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K`;
+  return String(value);
+}
+
+function getBrowserTranslateLanguage() {
+  const language = (navigator.languages?.[0] ?? navigator.language ?? '').toLowerCase();
+  const code = language.split('-')[0];
+  const supported = new Set([
+    'af', 'ar', 'az', 'be', 'bg', 'bn', 'bs', 'ca', 'cs', 'cy', 'da', 'de', 'el', 'en', 'es', 'et', 'eu',
+    'fa', 'fi', 'fr', 'ga', 'gl', 'gu', 'hi', 'hr', 'hu', 'hy', 'id', 'is', 'it', 'iw', 'ja', 'ka', 'kk',
+    'km', 'kn', 'ko', 'ky', 'la', 'lt', 'lv', 'mk', 'ml', 'mn', 'mr', 'ms', 'mt', 'nl', 'no', 'pl', 'pt',
+    'ro', 'ru', 'sk', 'sl', 'sq', 'sr', 'sv', 'sw', 'ta', 'te', 'th', 'tr', 'uk', 'ur', 'uz', 'vi', 'zh',
+  ]);
+
+  if (language.startsWith('zh-tw') || language.startsWith('zh-hk')) return 'zh-TW';
+  return supported.has(code) ? code : 'en';
+}
+
+function applyAutoTranslate() {
+  const language = getBrowserTranslateLanguage();
+  localStorage.setItem(AUTO_TRANSLATE_KEY, language);
+  document.cookie = `googtrans=/ru/${language}; path=/`;
+  document.cookie = `googtrans=/ru/${language}; path=/; domain=${window.location.hostname}`;
+  window.location.reload();
+}
 
 function renderVisualIcon(icon: string, className = '') {
   const effect = avatarEffectByIcon[icon];
@@ -1590,8 +1830,8 @@ function renderVisualIcon(icon: string, className = '') {
   if (!effect) return <span className={classes}>{icon}</span>;
 
   return (
-    <span className={`${classes} shop-icon--${effect}`} aria-label={icon}>
-      <span className="shop-avatar-base">TU</span>
+    <span className={`${classes} shop-icon--${effect} ${getAvatarVariantClass(icon)}`} aria-label={icon}>
+      <span className="shop-avatar-base" data-code={icon}>TU</span>
       <span className="shop-avatar-effect">{icon}</span>
     </span>
   );
@@ -1655,6 +1895,7 @@ export default function App() {
   const [authNotice, setAuthNotice] = useState('');
   const [theme, setTheme] = useState<DesignTheme>('neon');
   const [activePage, setActivePage] = useState<AppPage>(() => getPageFromLocation());
+  const [playerStatus, setPlayerStatus] = useState(() => localStorage.getItem(PLAYER_STATUS_KEY) || playerStatuses[0]);
   const [profileSearch, setProfileSearch] = useState('');
   const [filterGame, setFilterGame] = useState('');
   const [filterLanguage, setFilterLanguage] = useState('');
@@ -1777,6 +2018,42 @@ export default function App() {
   }, [shopState.ownedItems]);
 
   useEffect(() => {
+    const translateWindow = window as typeof window & {
+      google?: {
+        translate?: {
+          TranslateElement: new (
+            options: { pageLanguage: string; autoDisplay: boolean; layout?: unknown },
+            elementId: string,
+          ) => void;
+        };
+      };
+      googleTranslateElementInit?: () => void;
+    };
+
+    if (document.getElementById('google-translate-script')) return;
+
+    translateWindow.googleTranslateElementInit = () => {
+      const TranslateElement = translateWindow.google?.translate?.TranslateElement;
+      if (!TranslateElement || !document.getElementById('google_translate_element')) return;
+
+      new TranslateElement(
+        {
+          pageLanguage: 'ru',
+          autoDisplay: false,
+          layout: (TranslateElement as unknown as { InlineLayout?: { SIMPLE?: unknown } }).InlineLayout?.SIMPLE,
+        },
+        'google_translate_element',
+      );
+    };
+
+    const script = document.createElement('script');
+    script.id = 'google-translate-script';
+    script.async = true;
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    document.body.appendChild(script);
+  }, []);
+
+  useEffect(() => {
     if (!supabase) return;
 
     supabase.auth.getUser().then(({ data }) => {
@@ -1880,6 +2157,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(SHOP_KEY, JSON.stringify(shopState));
   }, [shopState]);
+
+  useEffect(() => {
+    localStorage.setItem(PLAYER_STATUS_KEY, playerStatus);
+  }, [playerStatus]);
 
   useEffect(() => {
     const savedMessages = localStorage.getItem(MESSAGES_KEY);
@@ -2625,6 +2906,9 @@ export default function App() {
   const hasReview = Boolean(user && reviews.some((review) => review.authorId === user.id));
   const hasPickedBackground = Boolean(shopState.activeBackground && shopState.activeBackground !== 'bg-classic');
   const hasAvatarItem = avatarShopItems.some((item) => shopState.ownedItems.includes(item.id));
+  const bestAvatarItems = avatarShopItems.filter((item) => getItemRarity(item.price).id === 'mythic');
+  const hasAllBestAvatarItems =
+    bestAvatarItems.length > 0 && bestAvatarItems.every((item) => shopState.ownedItems.includes(item.id));
   const profileValueByField: Record<string, string> = {
     name: profile.name,
     game: profile.game,
@@ -2670,6 +2954,12 @@ export default function App() {
         return profile.about.trim().length >= quest.target;
       case 'completed':
         return completedQuestCount >= quest.target;
+      case 'all-best-items':
+        return hasAllBestAvatarItems;
+      case 'all-quests':
+        return questItems
+          .filter((item) => item.id !== quest.id)
+          .every((item) => shopState.completedQuests.includes(item.id));
       default:
         return false;
     }
@@ -2678,16 +2968,80 @@ export default function App() {
     const difficulty = activeUiLanguage === 'en' ? quest.difficultyEn : quest.difficultyRu;
     const title = activeUiLanguage === 'en' ? quest.titleEn : quest.titleRu;
     const description = activeUiLanguage === 'en' ? quest.descriptionEn : quest.descriptionRu;
+    const ready = getQuestReady(quest);
+    const claimed = shopState.completedQuests.includes(quest.id);
+    const isHiddenSecret = quest.difficulty === 'secret' && !claimed;
 
     return {
       ...quest,
-      title,
-      description,
+      title: isHiddenSecret ? '???' : title,
+      description: isHiddenSecret
+        ? activeUiLanguage === 'en'
+          ? 'Secret quest. Hint: collect every MYTH item.'
+          : 'Секретный квест. Подсказка: собери все MYTH вещи.'
+        : description,
       difficultyId: quest.difficulty,
       difficulty,
-      ready: getQuestReady(quest),
+      ready,
     };
   });
+  const levelInfo = getLevelInfo(shopState.xp, shopState.completedQuests.length);
+  const dailyQuestBoard = questProgress
+    .filter((quest) => quest.difficultyId !== 'secret' && !shopState.completedQuests.includes(quest.id))
+    .slice(new Date().getDate() % 7, new Date().getDate() % 7 + 3);
+  const earnedBadges = [
+    { label: 'Первый игрок', unlocked: myProfiles.length > 0 },
+    { label: 'Охотник за XP', unlocked: shopState.xp >= 3000 },
+    { label: 'Коллекционер', unlocked: shopState.ownedItems.length >= 3 },
+    { label: 'Добрый тиммейт', unlocked: Object.values(reputation).some((items) => (items.team ?? 0) + (items.calm ?? 0) >= 3) },
+    { label: 'Легенда TeamUp', unlocked: levelInfo.level >= 20 },
+  ].filter((badge) => badge.unlocked);
+  const leaderboardPlayers = people
+    .filter((player) => !reportedIds.includes(player.id) && !blockedIds.includes(player.id))
+    .map((player) => {
+      const playerReputation = reputation[player.id] ?? {};
+      const reputationScore = Object.values(playerReputation).reduce((total, value) => total + value, 0);
+      const messageScore = allMessages.filter((message) => message.profileId === player.id).length;
+      return { ...player, leaderboardScore: reputationScore * 15 + messageScore * 4 + (contactIds.includes(player.id) ? 20 : 0) };
+    })
+    .sort((left, right) => right.leaderboardScore - left.leaderboardScore)
+    .slice(0, 5);
+  const avatarRaritySections = [
+    { id: 'mythic', label: 'MYTH', text: 'Самые редкие эффекты.' },
+    { id: 'legendary', label: 'LEG', text: 'Золотые украшения.' },
+    { id: 'epic', label: 'EPIC', text: 'Яркие эффекты.' },
+    { id: 'rare', label: 'RARE', text: 'Прокачанные вещи.' },
+    { id: 'common', label: 'COM', text: 'Стартовые вещи.' },
+  ]
+    .map((section) => ({
+      ...section,
+      items: avatarShopItems.filter((item) => getItemRarity(item.price).id === section.id),
+    }))
+    .filter((section) => section.items.length > 0);
+  const onboardingSteps = [
+    { title: '1. Анкета', text: myProfiles.length > 0 ? 'Готово' : 'Создай профиль игрока', done: myProfiles.length > 0, page: 'profile' as AppPage },
+    { title: '2. Игроки', text: contactIds.length > 0 ? `${contactIds.length} контактов` : 'Найди тиммейтов', done: contactIds.length > 0, page: 'matches' as AppPage },
+    { title: '3. Чат', text: sentMessageCount > 0 ? `${sentMessageCount} сообщений` : 'Напиши первое сообщение', done: sentMessageCount > 0, page: 'chats' as AppPage },
+    { title: '4. XP', text: `${shopState.completedQuests.length} квестов`, done: shopState.completedQuests.length > 0, page: 'shop' as AppPage },
+  ];
+  const recommendedPlayers = matches.slice(0, 4);
+  const seasonProgress = Math.min(100, Math.round(((shopState.completedQuests.length * 6) + levelInfo.level * 3) % 101));
+  const smartNotifications = [
+    unreadChatCount > 0 ? `${unreadChatCount} новых сообщений` : '',
+    dailyRewardClaimed ? '' : 'Ежедневный бонус XP доступен',
+    recommendedPlayers.length > 0 ? `${recommendedPlayers.length} игроков подходят тебе` : '',
+    shopState.ownedItems.length > 0 ? `${shopState.ownedItems.length} вещей в инвентаре` : '',
+  ].filter(Boolean);
+  const teamRooms = gameStats.slice(0, 6).map((item, index) => ({
+    id: `${item.game}-${index}`,
+    title: `${item.game} · ${index % 2 === 0 ? 'Squad' : 'Duo'}`,
+    game: item.game,
+    slots: index % 2 === 0 ? 4 : 2,
+    mode: index % 3 === 0 ? 'Ranked' : index % 3 === 1 ? 'Chill' : 'Voice',
+    online: item.online,
+  }));
+  const inventoryItems = avatarShopItems.filter((item) => shopState.ownedItems.includes(item.id));
+  const inventoryBackgrounds = backgroundShopItems.filter((item) => shopState.ownedItems.includes(item.id) || item.id === shopState.activeBackground);
   const navItems: Array<{ page: AppPage; label: string; locked?: boolean; badge?: number }> = [
     { page: 'home', label: t.navHome },
     { page: 'games', label: activeUiLanguage === 'en' ? 'Games' : 'Игры' },
@@ -2727,6 +3081,13 @@ export default function App() {
         </nav>
 
         <div className="app-header__actions">
+          <div className="site-translator">
+            <span>🌐 Язык сайта</span>
+            <button type="button" onClick={applyAutoTranslate}>
+              Авто
+            </button>
+            <div id="google_translate_element" />
+          </div>
           <span className={user ? 'status-badge status-badge--online' : 'status-badge'}>
             {user ? 'Online' : 'Guest'}
           </span>
@@ -2783,6 +3144,10 @@ export default function App() {
           </div>
           {user && (
             <section className="home-dashboard" aria-label="TeamUp dashboard">
+              <button type="button" onClick={() => openPage('shop')}>
+                <b>LV {levelInfo.level} · {levelInfo.rankShort}</b>
+                <span>{levelInfo.progress}% до нового уровня</span>
+              </button>
               <button type="button" onClick={() => openPage('profile')}>
                 <b>{myProfiles.length > 0 ? 'Анкета готова' : 'Создай анкету'}</b>
                 <span>{myProfiles.length > 0 ? profile.game || 'TeamUp' : 'Заполни профиль игрока'}</span>
@@ -2799,6 +3164,100 @@ export default function App() {
                 <b>{dailyRewardClaimed ? 'Награда взята' : '+750 XP'}</b>
                 <span>Ежедневный бонус</span>
               </button>
+            </section>
+          )}
+          {user && (
+            <section className="home-game-progress" aria-label="TeamUp progress">
+              <article>
+                <div className="level-card__top">
+                  <span>{playerStatus}</span>
+                  <b>{levelInfo.rankShort}</b>
+                </div>
+                <h2>LV {levelInfo.level}</h2>
+                <div className="level-progress"><span style={{ width: `${levelInfo.progress}%` }} /></div>
+                <p>{earnedBadges.length ? earnedBadges.map((badge) => badge.label).join(' · ') : 'Открой первый бейдж через анкету, квесты или магазин.'}</p>
+              </article>
+              <article>
+                <div className="level-card__top">
+                  <span>Топ игроков</span>
+                  <b>{leaderboardPlayers.length}</b>
+                </div>
+                <div className="leaderboard-mini">
+                  {leaderboardPlayers.length === 0 ? (
+                    <p>Пока нет рейтинга. Добавь анкеты и активность.</p>
+                  ) : (
+                    leaderboardPlayers.map((player, index) => (
+                      <button key={player.id} type="button" onClick={() => openPlayerProfile(player.id)}>
+                        <b>#{index + 1}</b>
+                        <span>{getDisplayName(player, t.anonymousPlayer)}</span>
+                        <small>{player.leaderboardScore} очков</small>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </article>
+            </section>
+          )}
+          {user && (
+            <section className="home-command-center" aria-label="TeamUp command center">
+              <article className="onboarding-panel">
+                <div className="mini-section-head">
+                  <span>Start</span>
+                  <h2>Что делать дальше</h2>
+                </div>
+                <div className="onboarding-steps">
+                  {onboardingSteps.map((step) => (
+                    <button key={step.title} type="button" className={step.done ? 'is-done' : undefined} onClick={() => openPage(step.page)}>
+                      <b>{step.done ? '✓' : '•'}</b>
+                      <span>{step.title}</span>
+                      <small>{step.text}</small>
+                    </button>
+                  ))}
+                </div>
+              </article>
+
+              <article className="season-panel">
+                <div className="mini-section-head">
+                  <span>Season 1</span>
+                  <h2>Summer TeamUp</h2>
+                </div>
+                <div className="level-progress"><span style={{ width: `${seasonProgress}%` }} /></div>
+                <p>{seasonProgress}% сезона · награды за квесты, XP и магазин</p>
+              </article>
+
+              <article className="notifications-panel">
+                <div className="mini-section-head">
+                  <span>Alerts</span>
+                  <h2>Уведомления</h2>
+                </div>
+                {smartNotifications.length === 0 ? (
+                  <p>Пока всё спокойно. Выполни квест или найди игрока.</p>
+                ) : (
+                  smartNotifications.map((notice) => <p key={notice}>{notice}</p>)
+                )}
+              </article>
+
+              <article className="recommendations-panel">
+                <div className="mini-section-head">
+                  <span>For you</span>
+                  <h2>Лучшие для тебя</h2>
+                </div>
+                <div className="recommendation-list">
+                  {recommendedPlayers.length === 0 ? (
+                    <p>Создай анкету, и здесь появятся подходящие игроки.</p>
+                  ) : (
+                    recommendedPlayers.map((player) => (
+                      <button key={player.id} type="button" onClick={() => openPlayerProfile(player.id)}>
+                        <span className="mini-avatar" style={{ backgroundColor: player.color }}>{getDisplayName(player, t.anonymousPlayer).slice(0, 2)}</span>
+                        <span>
+                          <b>{getDisplayName(player, t.anonymousPlayer)}</b>
+                          <small>{player.game} · {player.match}% · {player.region}</small>
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </article>
             </section>
           )}
           <section className="hero-guide" aria-label={t.guideTitle}>
@@ -2890,6 +3349,29 @@ export default function App() {
             <span>01</span>
             <h2>{t.profileTitle}</h2>
           </div>
+
+          <section className="profile-game-card" aria-label="Profile level">
+            <div className="profile-game-card__avatar">
+              {renderVisualIcon(visualProfile?.icon ?? (user ? defaultVisualProfile(user).icon : userIconOptions[0]))}
+            </div>
+            <div>
+              <span>{levelInfo.rankShort} · LV {levelInfo.level}</span>
+              <h3>{user ? displayNameFromUser(user, visualProfile) : 'TeamUp Player'}</h3>
+              <div className="level-progress"><span style={{ width: `${levelInfo.progress}%` }} /></div>
+              <div className="badge-row">
+                {earnedBadges.length === 0 ? <small>Пока нет бейджей</small> : earnedBadges.map((badge) => <small key={badge.label}>{badge.label}</small>)}
+              </div>
+            </div>
+          </section>
+
+          <label>
+            Статус игрока
+            <select value={playerStatus} onChange={(event) => setPlayerStatus(event.target.value)}>
+              {playerStatuses.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
 
           <div className="form-grid">
             <label>
@@ -3146,6 +3628,31 @@ export default function App() {
             <h2>{activeUiLanguage === 'en' ? 'Game hubs' : 'Игровые разделы'}</h2>
           </div>
 
+          {gameStats.length > 0 && (
+            <section className="weekly-games">
+              <div className="mini-section-head">
+                <span>Top week</span>
+                <h2>Игры недели</h2>
+              </div>
+              <div className="weekly-games__list">
+                {gameStats.slice(0, 5).map((item, index) => (
+                  <button
+                    key={item.game}
+                    type="button"
+                    onClick={() => {
+                      setFilterGame(item.game);
+                      openPage('matches');
+                    }}
+                  >
+                    <b>#{index + 1}</b>
+                    <span>{item.game}</span>
+                    <small>{item.players} игроков</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {gameStats.length === 0 ? (
             <p className="empty-state">
               {activeUiLanguage === 'en'
@@ -3186,6 +3693,30 @@ export default function App() {
             <span>02</span>
             <h2>{t.matchesTitle}</h2>
           </div>
+
+          {teamRooms.length > 0 && (
+            <section className="team-rooms-panel">
+              <div className="mini-section-head">
+                <span>Rooms</span>
+                <h2>Комнаты команд</h2>
+              </div>
+              <div className="team-room-list">
+                {teamRooms.map((room) => (
+                  <button
+                    key={room.id}
+                    type="button"
+                    onClick={() => {
+                      setFilterGame(room.game);
+                      setProfileSearch('');
+                    }}
+                  >
+                    <b>{room.title}</b>
+                    <span>{room.mode} · {room.slots} места · {room.online} онлайн</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
           <label className="profile-search">
             {t.searchProfile}
@@ -3528,13 +4059,21 @@ export default function App() {
                       {getDisplayName(selectedPlayer, t.anonymousPlayer).slice(0, 2)}
                     </div>
                     <div>
-                      <span>{selectedPlayer.game}</span>
+                      <span>{selectedPlayer.game} · {isOwnProfile ? playerStatus : getPresenceStatus(selectedPlayer, activeUiLanguage)}</span>
                       <h2>{getDisplayName(selectedPlayer, t.anonymousPlayer)}</h2>
                       <p>
-                        {selectedPlayer.age} {t.years} · {selectedPlayer.rank} · {getPresenceStatus(selectedPlayer, activeUiLanguage)}
+                        {selectedPlayer.age} {t.years} · {selectedPlayer.rank} · {levelInfo.rankShort}
                       </p>
                     </div>
                   </div>
+
+                  {isOwnProfile && (
+                    <div className="profile-level-strip">
+                      <b>LV {levelInfo.level}</b>
+                      <div className="level-progress"><span style={{ width: `${levelInfo.progress}%` }} /></div>
+                      <small>{earnedBadges.length ? earnedBadges.map((badge) => badge.label).join(' · ') : 'Бейджи появятся после квестов.'}</small>
+                    </div>
+                  )}
 
                   <p className="player-about">{selectedPlayer.about}</p>
 
@@ -3656,7 +4195,7 @@ export default function App() {
             </div>
             <div className="xp-card">
               <span>{extraUi.xp}</span>
-              <strong>{shopState.xp.toLocaleString('ru-RU')}</strong>
+              <strong>{formatCompactNumber(shopState.xp)}</strong>
             </div>
           </div>
 
@@ -3664,8 +4203,8 @@ export default function App() {
             <aside className="shop-sidebar" aria-label="Store sections">
               <div className="shop-sidebar__wallet">
                 <span>Wallet</span>
-                <strong>{shopState.xp.toLocaleString('ru-RU')}</strong>
-                <small>XP Balance</small>
+                <strong>{formatCompactNumber(shopState.xp)}</strong>
+                <small>XP</small>
                 <button type="button" disabled={dailyRewardClaimed} onClick={claimDailyReward}>
                   {dailyRewardClaimed ? 'Daily claimed' : '+750 daily XP'}
                 </button>
@@ -3679,6 +4218,10 @@ export default function App() {
                 <button type="button" className={shopTab === 'quests' ? 'is-active' : undefined} onClick={() => setShopTab('quests')}>
                   <span>XP</span>
                   {extraUi.quests}
+                </button>
+                <button type="button" className={shopTab === 'inventory' ? 'is-active' : undefined} onClick={() => setShopTab('inventory')}>
+                  <span>INV</span>
+                  Инвентарь
                 </button>
               </div>
 
@@ -3700,40 +4243,57 @@ export default function App() {
                     <small>Animated effects stay on your avatar after equip.</small>
                   </div>
 
-                  <div className="shop-grid shop-grid--catalog">
-                    {avatarShopItems.map((item) => {
-                      const owned = shopState.ownedItems.includes(item.id);
-                      const active = visualProfile?.icon === item.icon;
-                      const canBuy = shopState.xp >= item.price;
-                      const rarity = item.price >= 250 ? 'Legendary' : item.price >= 190 ? 'Rare' : 'Common';
+                  <div className="shop-rarity-sections">
+                    {avatarRaritySections.map((section) => (
+                      <section className={`shop-rarity-section shop-rarity-section--${section.id}`} key={section.id}>
+                        <div className="shop-rarity-head">
+                          <div>
+                            <span>{section.label}</span>
+                            <h4>{section.label} items</h4>
+                          </div>
+                          <small>{section.text}</small>
+                        </div>
 
-                      return (
-                        <article className={active ? 'shop-card is-active' : 'shop-card'} key={item.id}>
-                          <div className="shop-card__badges">
-                            <span>{rarity}</span>
-                            {active && <span>{extraUi.active}</span>}
-                            {owned && !active && <span>Owned</span>}
-                          </div>
-                          <span className={`shop-icon shop-icon--${item.id.replace('icon-', '')}`} aria-hidden="true">
-                            <span className="shop-avatar-base">TU</span>
-                            <span className="shop-avatar-effect">{item.icon}</span>
-                          </span>
-                          <div className="shop-card__body">
-                            <b>{item.title}</b>
-                            <small>{item.price} XP</small>
-                          </div>
-                          {owned ? (
-                            <button className="shop-action" type="button" disabled={active} onClick={() => void equipAvatarItem(item.icon)}>
-                              {active ? extraUi.active : extraUi.equip}
-                            </button>
-                          ) : (
-                            <button className="shop-action" type="button" disabled={!canBuy} onClick={() => buyShopItem(item.id, item.price)}>
-                              {canBuy ? extraUi.buy : 'No XP'}
-                            </button>
-                          )}
-                        </article>
-                      );
-                    })}
+                        <div className="shop-grid shop-grid--catalog">
+                          {section.items.map((item) => {
+                            const owned = shopState.ownedItems.includes(item.id);
+                            const active = visualProfile?.icon === item.icon;
+                            const canBuy = shopState.xp >= item.price;
+                            const rarity = getItemRarity(item.price);
+
+                            return (
+                              <article className={active ? `shop-card is-active rarity-${rarity.id}` : `shop-card rarity-${rarity.id}`} key={item.id}>
+                                <div className="shop-card__badges">
+                                  <span>{rarity.short}</span>
+                                  {active && <span>{extraUi.active}</span>}
+                                  {owned && !active && <span>Owned</span>}
+                                </div>
+                                <span
+                                  className={`shop-icon shop-icon--${getAvatarEffectClass(item.icon, item.id)} ${getAvatarVariantClass(item.icon)} ${active ? 'is-equipped' : ''}`}
+                                  aria-hidden="true"
+                                >
+                                  <span className="shop-avatar-base" data-code={item.icon}>TU</span>
+                                  <span className="shop-avatar-effect">{item.icon}</span>
+                                </span>
+                                <div className="shop-card__body">
+                                  <b>{item.title}</b>
+                                  <small>{formatCompactNumber(item.price)} XP</small>
+                                </div>
+                                {owned ? (
+                                  <button className="shop-action" type="button" disabled={active} onClick={() => void equipAvatarItem(item.icon)}>
+                                    {active ? extraUi.active : extraUi.equip}
+                                  </button>
+                                ) : (
+                                  <button className="shop-action" type="button" disabled={!canBuy} onClick={() => buyShopItem(item.id, item.price)}>
+                                    {canBuy ? extraUi.buy : 'No XP'}
+                                  </button>
+                                )}
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    ))}
                   </div>
                 </>
               )}
@@ -3748,6 +4308,29 @@ export default function App() {
                     <small>{shopState.completedQuests.length}/{questProgress.length} claimed</small>
                   </div>
 
+                  <section className="daily-quest-panel" aria-label="Daily quests">
+                    <div>
+                      <span>Daily quests</span>
+                      <h3>Сегодня</h3>
+                    </div>
+                    <div className="daily-quest-list">
+                      {dailyQuestBoard.map((quest) => {
+                        const claimed = shopState.completedQuests.includes(quest.id);
+                        return (
+                          <button
+                            key={quest.id}
+                            type="button"
+                            disabled={!quest.ready || claimed}
+                            onClick={() => claimQuest(quest.id, quest.reward + 75, quest.ready)}
+                          >
+                            <b>{quest.title}</b>
+                          <small>{claimed ? 'Получено' : `+${formatCompactNumber(quest.reward + 75)} XP`}</small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
                   <div className="quest-list">
                     {questProgress.map((quest) => {
                       const claimed = shopState.completedQuests.includes(quest.id);
@@ -3760,7 +4343,7 @@ export default function App() {
                             </span>
                             <b>{quest.title}</b>
                             <p>{quest.description}</p>
-                            <small>+{quest.reward} XP</small>
+                            <small>+{formatCompactNumber(quest.reward)} XP</small>
                           </div>
                           <button
                             className="quest-claim"
@@ -3774,6 +4357,62 @@ export default function App() {
                       );
                     })}
                   </div>
+                </>
+              )}
+
+              {shopTab === 'inventory' && (
+                <>
+                  <div className="shop-section-head">
+                    <div>
+                      <span>Your items</span>
+                      <h3>Inventory</h3>
+                    </div>
+                    <small>{inventoryItems.length} items · {inventoryBackgrounds.length} backgrounds</small>
+                  </div>
+
+                  <section className="inventory-panel">
+                    <div className="inventory-block">
+                      <div className="mini-section-head">
+                        <span>Avatar</span>
+                        <h2>Вещи</h2>
+                      </div>
+                      {inventoryItems.length === 0 ? (
+                        <p>Пока нет купленных вещей. Купи первую во вкладке предметов.</p>
+                      ) : (
+                        <div className="inventory-grid">
+                          {inventoryItems.map((item) => {
+                            const active = visualProfile?.icon === item.icon;
+                            const rarity = getItemRarity(item.price);
+                            return (
+                              <button key={item.id} type="button" className={active ? `is-active rarity-${rarity.id}` : `rarity-${rarity.id}`} onClick={() => void equipAvatarItem(item.icon)}>
+                                <span className={`shop-icon shop-icon--${getAvatarEffectClass(item.icon, item.id)} ${getAvatarVariantClass(item.icon)}`} aria-hidden="true">
+                                  <span className="shop-avatar-base" data-code={item.icon}>TU</span>
+                                  <span className="shop-avatar-effect">{item.icon}</span>
+                                </span>
+                                <b>{item.title}</b>
+                                <small>{active ? 'Active' : rarity.short}</small>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="inventory-block">
+                      <div className="mini-section-head">
+                        <span>Backgrounds</span>
+                        <h2>Фоны</h2>
+                      </div>
+                      <div className="inventory-bg-grid">
+                        {inventoryBackgrounds.map((item) => (
+                          <button key={item.id} type="button" className={shopState.activeBackground === item.id ? 'is-active' : undefined} onClick={() => equipBackground(item.id)}>
+                            <span className={`background-preview ${item.id}`} />
+                            <b>{item.title}</b>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
                 </>
               )}
             </div>
