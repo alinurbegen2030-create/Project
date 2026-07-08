@@ -1581,13 +1581,22 @@ function displayNameFromUser(user: User, visualProfile?: UserVisualProfile | nul
   return visualProfile?.displayName?.trim() || defaultVisualProfile(user).displayName;
 }
 
+function cleanVisualIconValue(icon?: string | null) {
+  const value = (icon ?? '').trim();
+  const decoratedMatch = value.match(/^decorated::([A-Z0-9]{1,4})::/);
+
+  if (decoratedMatch) return decoratedMatch[1];
+  return value;
+}
+
 function getStoredUserSettings(userId: string) {
   const saved = localStorage.getItem(USER_SETTINGS_KEY);
   if (!saved) return null;
 
   try {
     const settings = JSON.parse(saved) as Record<string, UserVisualProfile>;
-    return settings[userId] ?? null;
+    const profile = settings[userId];
+    return profile ? { ...profile, icon: cleanVisualIconValue(profile.icon) } : null;
   } catch {
     localStorage.removeItem(USER_SETTINGS_KEY);
     return null;
@@ -1597,7 +1606,7 @@ function getStoredUserSettings(userId: string) {
 function storeUserSettings(userId: string, visualProfile: UserVisualProfile) {
   const saved = localStorage.getItem(USER_SETTINGS_KEY);
   const settings = saved ? (JSON.parse(saved) as Record<string, UserVisualProfile>) : {};
-  settings[userId] = visualProfile;
+  settings[userId] = { ...visualProfile, icon: cleanVisualIconValue(visualProfile.icon) };
   localStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
 }
 
@@ -1711,7 +1720,7 @@ function rowToReview(row: TeamupReviewRow): SiteReview {
     id: row.id,
     authorId: row.author_id ?? null,
     authorName: row.author_name,
-    authorIcon: row.author_icon ?? undefined,
+    authorIcon: cleanVisualIconValue(row.author_icon),
     rating: row.rating,
     body: row.body,
     createdAt: row.created_at,
@@ -1719,7 +1728,7 @@ function rowToReview(row: TeamupReviewRow): SiteReview {
 }
 
 function getReviewAuthorIcon(review: SiteReview) {
-  return review.authorIcon || review.authorName.trim().slice(0, 2).toUpperCase() || 'TU';
+  return cleanVisualIconValue(review.authorIcon) || review.authorName.trim().slice(0, 2).toUpperCase() || 'TU';
 }
 
 function renderStars(rating: number) {
@@ -1883,23 +1892,24 @@ function applyAutoTranslate() {
 }
 
 function renderVisualIcon(icon: string, className = '') {
-  const effect = avatarEffectByIcon[icon];
+  const cleanIcon = cleanVisualIconValue(icon);
+  const effect = avatarEffectByIcon[cleanIcon];
   const classes = ['animated-avatar', className].filter(Boolean).join(' ');
 
-  if (icon.startsWith('data:image/')) {
+  if (cleanIcon.startsWith('data:image/')) {
     return (
       <span className={`${classes} animated-avatar--image`}>
-        <img src={icon} alt="" />
+        <img src={cleanIcon} alt="" />
       </span>
     );
   }
 
-  if (!effect) return <span className={classes}>{icon}</span>;
+  if (!effect) return <span className={classes}>{cleanIcon.slice(0, 4) || 'TU'}</span>;
 
   return (
-    <span className={`${classes} shop-icon--${effect} ${getAvatarVariantClass(icon)}`} aria-label={icon}>
-      <span className="shop-avatar-base" data-code={icon}>TU</span>
-      <span className="shop-avatar-effect">{icon}</span>
+    <span className={`${classes} shop-icon--${effect} ${getAvatarVariantClass(cleanIcon)}`} aria-label={cleanIcon}>
+      <span className="shop-avatar-base" data-code={cleanIcon}>TU</span>
+      <span className="shop-avatar-effect">{cleanIcon}</span>
     </span>
   );
 }
@@ -2527,12 +2537,13 @@ export default function App() {
 
   async function saveVisualProfile(nextProfile: UserVisualProfile) {
     if (!user) return;
+    const nextIcon = cleanVisualIconValue(nextProfile.icon);
 
     const cleanProfile = {
       displayName: nextProfile.displayName.trim() || defaultVisualProfile(user).displayName,
       icon:
-        availableIconOptions.includes(nextProfile.icon) || nextProfile.icon.startsWith('data:image/')
-          ? nextProfile.icon
+        availableIconOptions.includes(nextIcon) || nextIcon.startsWith('data:image/')
+          ? nextIcon
           : availableIconOptions[0],
     };
 

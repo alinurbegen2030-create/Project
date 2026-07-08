@@ -47,23 +47,32 @@ const avatarEffectByIcon: Record<string, string> = {
   DG: 'dragon',
 };
 
-function renderVisualIcon(icon: string) {
-  const effect = avatarEffectByIcon[icon];
+function cleanVisualIconValue(icon?: string | null) {
+  const value = (icon ?? '').trim();
+  const decoratedMatch = value.match(/^decorated::([A-Z0-9]{1,4})::/);
 
-  if (icon.startsWith('data:image/')) {
+  if (decoratedMatch) return decoratedMatch[1];
+  return value;
+}
+
+function renderVisualIcon(icon: string) {
+  const cleanIcon = cleanVisualIconValue(icon);
+  const effect = avatarEffectByIcon[cleanIcon];
+
+  if (cleanIcon.startsWith('data:image/')) {
     return (
       <span className="animated-avatar animated-avatar--image">
-        <img src={icon} alt="" />
+        <img src={cleanIcon} alt="" />
       </span>
     );
   }
 
-  if (!effect) return <span className="animated-avatar">{icon}</span>;
+  if (!effect) return <span className="animated-avatar">{cleanIcon.slice(0, 4) || 'TU'}</span>;
 
   return (
-    <span className={`animated-avatar shop-icon--${effect}`} aria-label={icon}>
+    <span className={`animated-avatar shop-icon--${effect}`} aria-label={cleanIcon}>
       <span className="shop-avatar-base">TU</span>
-      <span className="shop-avatar-effect">{icon}</span>
+      <span className="shop-avatar-effect">{cleanIcon}</span>
     </span>
   );
 }
@@ -353,7 +362,7 @@ export function Auth({
     if (!user) return;
 
     setVisualNameDraft(visualProfile?.displayName ?? displayNameFromEmail(user.email));
-    setIconDraft(visualProfile?.icon ?? iconOptions[0] ?? 'TU');
+    setIconDraft(cleanVisualIconValue(visualProfile?.icon ?? iconOptions[0] ?? 'TU'));
   }, [user, visualProfile]);
 
   async function refreshSuggestedUsername() {
@@ -514,7 +523,7 @@ export function Auth({
     try {
       await onVisualProfileChange({
         displayName: visualNameDraft,
-        icon: iconDraft,
+        icon: cleanVisualIconValue(iconDraft),
       });
       setMessage(copy.visualSaved);
     } catch {
