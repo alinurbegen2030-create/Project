@@ -5,7 +5,7 @@ import { supabase } from './lib/supabase';
 
 type SupportedUiLanguage = 'ru' | 'kk' | 'en';
 type DesignTheme = 'neon' | 'arena' | 'pixel';
-type AppPage = 'home' | 'games' | 'matches' | 'profile' | 'player' | 'chats' | 'reviews' | 'shop';
+type AppPage = 'home' | 'matches' | 'profile' | 'player' | 'chats' | 'reviews' | 'shop' | 'gemini';
 type ShopTab = 'avatars' | 'quests' | 'inventory';
 
 type UserVisualProfile = {
@@ -91,6 +91,11 @@ type ChatMessage = {
 
 type ReplyTarget = Pick<ChatMessage, 'authorEmail' | 'body'>;
 
+type GeminiMessage = {
+  role: 'user' | 'assistant';
+  text: string;
+};
+
 type TeamEvent = {
   id: string;
   title: string;
@@ -122,6 +127,35 @@ type SiteReview = {
   createdAt: string;
 };
 
+type PlayerReviewPreview = {
+  id: string;
+  authorName: string;
+  rating: number;
+  body: string;
+  createdAt: string;
+};
+
+type PlayerReview = PlayerReviewPreview & {
+  playerId: string;
+};
+
+type PlayerReviewTarget = {
+  id: string;
+  name: string;
+  game: string;
+  rank: string;
+  color: string;
+};
+
+type ProfileReportRecord = {
+  playerId: string;
+  totalReports: number;
+  banLevel: number;
+  reporterKeys: string[];
+  bannedUntil?: string;
+  permanent?: boolean;
+};
+
 type TeamupReviewRow = {
   id: string;
   author_id?: string | null;
@@ -140,16 +174,16 @@ type ShopState = {
   lastDailyReward?: string;
 };
 
-const appPages: AppPage[] = ['home', 'games', 'matches', 'profile', 'player', 'chats', 'reviews', 'shop'];
+const appPages: AppPage[] = ['home', 'matches', 'profile', 'player', 'chats', 'reviews', 'shop', 'gemini'];
 const pagePaths: Record<AppPage, string> = {
   home: '/',
-  games: '/games',
   matches: '/matches',
   profile: '/profile',
   player: '/player',
   chats: '/chats',
   reviews: '/reviews',
   shop: '/shop',
+  gemini: '/gemini',
 };
 
 function getPageFromLocation(): AppPage {
@@ -160,6 +194,10 @@ function getPageFromLocation(): AppPage {
   }
 
   const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  if (path === 'games') {
+    window.history.replaceState({}, '', pagePaths.matches);
+    return 'matches';
+  }
   if (path.startsWith('player/')) return 'player';
   const pathPage = path as AppPage | '';
   if (!pathPage) return 'home';
@@ -444,22 +482,22 @@ const chatText: Record<SupportedUiLanguage, Record<string, string>> = {
 
 const eventText: Record<SupportedUiLanguage, Record<string, string>> = {
   ru: {
-    eventsTitle: 'РРіСЂРѕРІС‹Рµ РµРІРµРЅС‚С‹',
-    eventsCreateTitle: 'РЎРѕР·РґР°С‚СЊ РµРІРµРЅС‚',
-    eventTitle: 'РќР°Р·РІР°РЅРёРµ',
-    eventTitlePlaceholder: 'РќР°РїСЂРёРјРµСЂ: Р’РµС‡РµСЂРЅРёР№ С‚СѓСЂРЅРёСЂ',
-    eventType: 'РўРёРї РµРІРµРЅС‚Р°',
-    eventGame: 'РРіСЂР°',
-    eventTime: 'Р’СЂРµРјСЏ',
-    eventLanguage: 'РЇР·С‹Рє',
-    eventSlots: 'РњРµСЃС‚',
-    eventDescription: 'РћРїРёСЃР°РЅРёРµ',
-    eventDescriptionPlaceholder: 'Р§С‚Рѕ Р±СѓРґРµС‚, РєРѕРіРѕ РёС‰РµС€СЊ, РєР°РєРёРµ РїСЂР°РІРёР»Р°',
-    createEvent: 'Р”РѕР±Р°РІРёС‚СЊ РµРІРµРЅС‚',
-    emptyEvents: 'РџРѕРєР° РЅРµС‚ РµРІРµРЅС‚РѕРІ. РЎРѕР·РґР°Р№ РїРµСЂРІС‹Р№.',
-    eventBy: 'РЎРѕР·РґР°Р»',
-    joinEvent: 'РќР°РїРёСЃР°С‚СЊ РІ С‡Р°С‚',
-    eventSaved: 'Р•РІРµРЅС‚ РґРѕР±Р°РІР»РµРЅ.',
+    eventsTitle: 'Игровые события',
+    eventsCreateTitle: 'Создать событие',
+    eventTitle: 'Название',
+    eventTitlePlaceholder: 'Например: Вечерний турнир',
+    eventType: 'Тип события',
+    eventGame: 'Игра',
+    eventTime: 'Время',
+    eventLanguage: 'Язык',
+    eventSlots: 'Мест',
+    eventDescription: 'Описание',
+    eventDescriptionPlaceholder: 'Что будет, кого ищешь, какие правила',
+    createEvent: 'Добавить событие',
+    emptyEvents: 'Пока нет событий. Создай первое.',
+    eventBy: 'Создал',
+    joinEvent: 'Написать в чат',
+    eventSaved: 'Событие добавлено.',
   },
   kk: {
     eventsTitle: 'РћР№С‹РЅ РµРІРµРЅС‚С‚РµСЂС–',
@@ -597,32 +635,32 @@ const uiCopy: Record<SupportedUiLanguage, Record<string, string>> = {
 
 const labels: Record<SupportedUiLanguage, Record<string, string>> = {
   ru: {
-    Ranked: 'Р РµР№С‚РёРЅРі',
-    Casual: 'РћР±С‹С‡РЅР°СЏ РёРіСЂР°',
-    Tryhard: 'РќР° РїРѕР±РµРґСѓ',
-    Chill: 'РЎРїРѕРєРѕР№РЅРѕ',
-    Morning: 'РЈС‚СЂРѕРј',
-    Day: 'Р”РЅРµРј',
-    Evening: 'Р’РµС‡РµСЂРѕРј',
-    Night: 'РќРѕС‡СЊСЋ',
-    Weekend: 'РќР° РІС‹С…РѕРґРЅС‹С…',
-    Duo: 'Р”СѓРѕ',
-    Squad: 'РЎРєРІР°Рґ',
-    Team: 'РљРѕРјР°РЅРґР°',
-    Party: 'РџР°С‚Рё',
-    Coach: 'РўСЂРµРЅРµСЂ',
-    Competitive: 'РЎРѕСЂРµРІРЅРѕРІР°С‚РµР»СЊРЅС‹Р№',
-    Premier: 'РџСЂРµРјСЊРµСЂ',
-    Survival: 'Р’С‹Р¶РёРІР°РЅРёРµ',
-    'Zero Build': 'Р‘РµР· СЃС‚СЂРѕРёС‚РµР»СЊСЃС‚РІР°',
+    Ranked: 'Рейтинг',
+    Casual: 'Обычная игра',
+    Tryhard: 'На победу',
+    Chill: 'Спокойно',
+    Morning: 'Утром',
+    Day: 'Днем',
+    Evening: 'Вечером',
+    Night: 'Ночью',
+    Weekend: 'На выходных',
+    Duo: 'Дуо',
+    Squad: 'Сквад',
+    Team: 'Команда',
+    Party: 'Пати',
+    Coach: 'Тренер',
+    Competitive: 'Соревновательный',
+    Premier: 'Премьер',
+    Survival: 'Выживание',
+    'Zero Build': 'Без строительства',
     'All Pick': 'All Pick',
-    Creative: 'РўРІРѕСЂС‡РµСЃРєРёР№',
-    Development: 'Р Р°Р·СЂР°Р±РѕС‚РєР°',
-    Kazakhstan: 'РљР°Р·Р°С…СЃС‚Р°РЅ',
-    Europe: 'Р•РІСЂРѕРїР°',
-    Asia: 'РђР·РёСЏ',
-    'North America': 'РЎРµРІРµСЂРЅР°СЏ РђРјРµСЂРёРєР°',
-    'South America': 'Р®Р¶РЅР°СЏ РђРјРµСЂРёРєР°',
+    Creative: 'Творческий',
+    Development: 'Разработка',
+    Kazakhstan: 'Казахстан',
+    Europe: 'Европа',
+    Asia: 'Азия',
+    'North America': 'Северная Америка',
+    'South America': 'Южная Америка',
     Kazakh: 'Қазақша',
     Russian: 'Русский',
     English: 'Английский',
@@ -675,24 +713,6 @@ const labels: Record<SupportedUiLanguage, Record<string, string>> = {
   en: {},
 };
 
-const formLanguageOptions = [
-  'Русский',
-  'Қазақша',
-  'English',
-  'Spanish',
-  'French',
-  'German',
-  'Turkish',
-  'Arabic',
-  'Chinese',
-  'Japanese',
-  'Korean',
-  'Portuguese',
-  'Italian',
-  'Hindi',
-  'Uzbek',
-];
-
 const gameOptions = [
   'Roblox',
   'Minecraft',
@@ -717,7 +737,7 @@ const gameOptions = [
   'Mobile Legends: Bang Bang',
   'League of Legends: Wild Rift',
   'Honor of Kings',
-  'PokГ©mon Unite',
+  'Pokemon Unite',
   'Vainglory',
   'Arena of Valor',
   'Marvel Super War',
@@ -741,7 +761,7 @@ const gameOptions = [
   'Old School RuneScape',
   'Dragon Raja',
   'Sky: Children of the Light',
-  'PokГ©mon GO',
+  'Pokemon GO',
   'Monster Hunter Now',
   'Pikmin Bloom',
   'Ingress Prime',
@@ -926,8 +946,10 @@ const STORAGE_KEY = 'teamup-real-player-profiles';
 const CONTACTS_KEY = 'teamup-contact-profile-ids';
 const MESSAGES_KEY = 'teamup-chat-messages';
 const REVIEWS_KEY = 'teamup-site-reviews';
+const PLAYER_REVIEWS_KEY = 'teamup-player-written-reviews';
 const USER_SETTINGS_KEY = 'teamup-user-visual-settings';
 const REPORTS_KEY = 'teamup-reported-profile-ids';
+const REPORT_RULES_KEY = 'teamup-profile-report-rules';
 const BLOCKED_KEY = 'teamup-blocked-profile-ids';
 const CHAT_READS_KEY = 'teamup-chat-read-times';
 const CHAT_CLEARS_KEY = 'teamup-chat-clear-times';
@@ -937,6 +959,13 @@ const REPUTATION_KEY = 'teamup-player-reputation';
 const PLAYER_STATUS_KEY = 'teamup-player-status';
 const AUTO_TRANSLATE_KEY = 'teamup-auto-translate-language';
 const STARTER_XP = 1_200;
+const REPORT_BAN_STEPS = [
+  { label: '1 день', durationMs: 24 * 60 * 60 * 1000 },
+  { label: '1 неделя', durationMs: 7 * 24 * 60 * 60 * 1000 },
+  { label: '6 месяцев', durationMs: 183 * 24 * 60 * 60 * 1000 },
+  { label: '1 год', durationMs: 365 * 24 * 60 * 60 * 1000 },
+  { label: 'навсегда', durationMs: null },
+];
 const playerStatuses = ['Ищу тиммейта', 'В игре', 'Не беспокоить', 'Онлайн'];
 const userIconOptions = ['TU', 'GG', 'XP', 'LV', 'HP', 'VR'];
 const profileColors = ['#e25555', '#2f9d68', '#e6a13d', '#6c63d9', '#3c7dd9', '#111827'];
@@ -1004,36 +1033,7 @@ const avatarShopItems = [
 ];
 const backgroundShopItems = [
   { id: 'bg-classic', title: 'Classic', price: 0 },
-  { id: 'bg-aurora', title: 'Aurora', price: 80 },
-  { id: 'bg-cyber', title: 'Cyber', price: 90 },
-  { id: 'bg-ocean', title: 'Ocean', price: 90 },
-  { id: 'bg-sunset', title: 'Sunset', price: 100 },
-  { id: 'bg-forest', title: 'Forest', price: 100 },
-  { id: 'bg-galaxy', title: 'Galaxy', price: 130 },
-  { id: 'bg-lava', title: 'Lava', price: 150 },
-  { id: 'bg-ice', title: 'Ice', price: 110 },
-  { id: 'bg-candy', title: 'Candy', price: 120 },
-  { id: 'bg-shadow', title: 'Shadow', price: 140 },
-  { id: 'bg-gold', title: 'Gold', price: 160 },
-  { id: 'bg-matrix', title: 'Matrix', price: 170 },
-  { id: 'bg-royal', title: 'Royal', price: 190 },
-  { id: 'bg-glitch', title: 'Glitch', price: 210 },
-  { id: 'bg-storm', title: 'Storm', price: 180 },
-  { id: 'bg-mint', title: 'Mint', price: 125 },
-  { id: 'bg-cherry', title: 'Cherry', price: 135 },
-  { id: 'bg-dream', title: 'Dream', price: 155 },
-  { id: 'bg-neon-city', title: 'Neon City', price: 220 },
-  { id: 'bg-desert', title: 'Desert', price: 145 },
-  { id: 'bg-volcano', title: 'Volcano', price: 230 },
-  { id: 'bg-night', title: 'Night', price: 175 },
-  { id: 'bg-rainbow', title: 'Rainbow', price: 240 },
-  { id: 'bg-space', title: 'Space', price: 260 },
-  { id: 'bg-toxic', title: 'Toxic', price: 205 },
-  { id: 'bg-snow', title: 'Snow', price: 150 },
-  { id: 'bg-samurai', title: 'Samurai', price: 275 },
-  { id: 'bg-hacker', title: 'Hacker', price: 300 },
-  { id: 'bg-cosmos', title: 'Cosmos', price: 320 },
-  { id: 'bg-diamond', title: 'Diamond', price: 350 },
+  { id: 'bg-black', title: 'Black', price: 0 },
 ];
 const difficultyCopy = {
   easy: { ru: 'Легкий', en: 'Easy', reward: 50 },
@@ -1268,12 +1268,6 @@ const questItems = [
   ...quest,
   reward: calculateQuestReward(quest, index),
 }));
-const designThemes: Array<{ id: DesignTheme; label: string }> = [
-  { id: 'neon', label: 'Neon' },
-  { id: 'arena', label: 'Arena' },
-  { id: 'pixel', label: 'Pixel' },
-];
-
 const initialProfile: Profile = {
   name: '',
   anonymous: false,
@@ -1295,6 +1289,19 @@ const initialProfile: Profile = {
 };
 
 const demoPlayers: Player[] = [];
+const playerReviewBotTargets: PlayerReviewTarget[] = [
+  { id: 'review-bot-valorant', name: 'Bot ValorantPro', game: 'Valorant', rank: 'Diamond', color: '#ef4444' },
+  { id: 'review-bot-roblox', name: 'Bot RobloxSquad', game: 'Roblox', rank: 'Builder', color: '#3b82f6' },
+  { id: 'review-bot-brawl', name: 'Bot BrawlStar', game: 'Brawl Stars', rank: 'Mythic', color: '#f59e0b' },
+];
+const playerReviewBots = ['MatchBot', 'SquadHelper', 'TeamUp Scout', 'RankChecker', 'GG Bot'];
+const playerReviewTexts = [
+  'Хорошо играет в команде, быстро отвечает и не токсичит.',
+  'Нормальный тиммейт: зашел вовремя, микрофон был, договорились без проблем.',
+  'Можно брать в команду, спокойно общается и помогает новичкам.',
+  'Сильный игрок для рейтинга, лучше всего подходит для дуо или сквада.',
+  'Понравилось играть вместе, не ливает и нормально объясняет план.',
+];
 
 function sameText(left: string, right: string) {
   return left.trim().toLowerCase() === right.trim().toLowerCase();
@@ -1302,6 +1309,23 @@ function sameText(left: string, right: string) {
 
 function label(value: string, lang: SupportedUiLanguage) {
   return labels[lang][value] ?? value;
+}
+
+function getPlayerReviewPreviews(player: { id: string }): PlayerReviewPreview[] {
+  const seed = player.id.split('').reduce((total, char) => total + char.charCodeAt(0), 0);
+
+  return [0, 1].map((offset) => {
+    const index = (seed + offset * 2) % playerReviewBots.length;
+    const daysAgo = ((seed + offset * 3) % 9) + 1;
+
+    return {
+      id: `${player.id}-bot-review-${offset}`,
+      authorName: playerReviewBots[index],
+      rating: offset === 0 ? 5 : 4,
+      body: playerReviewTexts[(seed + offset) % playerReviewTexts.length],
+      createdAt: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString(),
+    };
+  });
 }
 
 function editDistance(left: string, right: string) {
@@ -1447,6 +1471,47 @@ function getStoredStringArray(key: string) {
   }
 }
 
+function getStoredReportRecords() {
+  const saved = localStorage.getItem(REPORT_RULES_KEY);
+  if (!saved) return {};
+
+  try {
+    const parsed = JSON.parse(saved) as Record<string, Partial<ProfileReportRecord>>;
+    return Object.fromEntries(
+      Object.entries(parsed).map(([playerId, record]) => [
+        playerId,
+        {
+          playerId,
+          totalReports: Math.max(0, Number(record.totalReports) || 0),
+          banLevel: Math.max(0, Number(record.banLevel) || 0),
+          reporterKeys: Array.isArray(record.reporterKeys) ? record.reporterKeys : [],
+          bannedUntil: record.bannedUntil,
+          permanent: Boolean(record.permanent),
+        },
+      ]),
+    ) as Record<string, ProfileReportRecord>;
+  } catch {
+    localStorage.removeItem(REPORT_RULES_KEY);
+    return {};
+  }
+}
+
+function getAnonymousReporterKey() {
+  const key = 'teamup-anonymous-reporter-id';
+  const saved = localStorage.getItem(key);
+  if (saved) return saved;
+  const next = crypto.randomUUID();
+  localStorage.setItem(key, next);
+  return next;
+}
+
+function getActiveBan(record?: ProfileReportRecord) {
+  if (!record) return null;
+  if (record.permanent) return record;
+  if (!record.bannedUntil) return null;
+  return new Date(record.bannedUntil).getTime() > Date.now() ? record : null;
+}
+
 function getStoredRecord(key: string) {
   const saved = localStorage.getItem(key);
   if (!saved) return {};
@@ -1477,13 +1542,15 @@ function getStoredReputation() {
 
 function getStoredShopState(): ShopState {
   const saved = localStorage.getItem(SHOP_KEY);
-  const fallback: ShopState = { xp: STARTER_XP, ownedItems: [], completedQuests: [], activeBackground: '', lastDailyReward: '' };
+  const fallback: ShopState = { xp: STARTER_XP, ownedItems: ['bg-classic'], completedQuests: [], activeBackground: 'bg-classic', lastDailyReward: '' };
 
   if (!saved) return fallback;
 
   try {
     const stored = { ...fallback, ...(JSON.parse(saved) as Partial<ShopState>) };
-    return { ...stored, xp: Math.max(stored.xp, STARTER_XP) };
+    const allowedBackgrounds = new Set(backgroundShopItems.map((item) => item.id));
+    const activeBackground = allowedBackgrounds.has(stored.activeBackground) ? stored.activeBackground : 'bg-classic';
+    return { ...stored, activeBackground, xp: Math.max(stored.xp, STARTER_XP) };
   } catch {
     localStorage.removeItem(SHOP_KEY);
     return fallback;
@@ -1493,9 +1560,9 @@ function getStoredShopState(): ShopState {
 function getPresenceStatus(player: Player, lang: SupportedUiLanguage) {
   const seed = player.id.split('').reduce((total, char) => total + char.charCodeAt(0), 0);
 
-  if (seed % 3 === 0) return lang === 'en' ? 'online' : 'РѕРЅР»Р°Р№РЅ';
-  if (seed % 3 === 1) return lang === 'en' ? 'was recently' : 'Р±С‹Р» РЅРµРґР°РІРЅРѕ';
-  return lang === 'en' ? 'offline' : 'РЅРµ РІ СЃРµС‚Рё';
+  if (seed % 3 === 0) return lang === 'en' ? 'online' : 'онлайн';
+  if (seed % 3 === 1) return lang === 'en' ? 'was recently' : 'был недавно';
+  return lang === 'en' ? 'offline' : 'не в сети';
 }
 
 function isMessageAfterClear(message: ChatMessage, clearTimes: Record<string, string>) {
@@ -1867,41 +1934,40 @@ function timeAgo(dateValue: string, lang: SupportedUiLanguage) {
   const timestamp = new Date(dateValue).getTime();
   const diffSeconds = Math.max(1, Math.floor((Date.now() - timestamp) / 1000));
   const units = [
-    { seconds: 31536000, ru: ['РіРѕРґ', 'РіРѕРґР°', 'Р»РµС‚'], kk: 'Р¶С‹Р»', en: ['year', 'years'] },
-    { seconds: 2592000, ru: ['РјРµСЃСЏС†', 'РјРµСЃСЏС†Р°', 'РјРµСЃСЏС†РµРІ'], kk: 'Р°Р№', en: ['month', 'months'] },
-    { seconds: 604800, ru: ['РЅРµРґРµР»СЋ', 'РЅРµРґРµР»Рё', 'РЅРµРґРµР»СЊ'], kk: 'Р°РїС‚Р°', en: ['week', 'weeks'] },
-    { seconds: 86400, ru: ['РґРµРЅСЊ', 'РґРЅСЏ', 'РґРЅРµР№'], kk: 'РєТЇРЅ', en: ['day', 'days'] },
-    { seconds: 3600, ru: ['С‡Р°СЃ', 'С‡Р°СЃР°', 'С‡Р°СЃРѕРІ'], kk: 'СЃР°Т“Р°С‚', en: ['hour', 'hours'] },
-    { seconds: 60, ru: ['РјРёРЅСѓС‚Сѓ', 'РјРёРЅСѓС‚С‹', 'РјРёРЅСѓС‚'], kk: 'РјРёРЅСѓС‚', en: ['minute', 'minutes'] },
-    { seconds: 1, ru: ['СЃРµРєСѓРЅРґСѓ', 'СЃРµРєСѓРЅРґС‹', 'СЃРµРєСѓРЅРґ'], kk: 'СЃРµРєСѓРЅРґ', en: ['second', 'seconds'] },
+    { seconds: 31536000, ru: ['год', 'года', 'лет'], kk: 'жыл', en: ['year', 'years'] },
+    { seconds: 2592000, ru: ['месяц', 'месяца', 'месяцев'], kk: 'ай', en: ['month', 'months'] },
+    { seconds: 604800, ru: ['неделю', 'недели', 'недель'], kk: 'апта', en: ['week', 'weeks'] },
+    { seconds: 86400, ru: ['день', 'дня', 'дней'], kk: 'күн', en: ['day', 'days'] },
+    { seconds: 3600, ru: ['час', 'часа', 'часов'], kk: 'сағат', en: ['hour', 'hours'] },
+    { seconds: 60, ru: ['минуту', 'минуты', 'минут'], kk: 'минут', en: ['minute', 'minutes'] },
+    { seconds: 1, ru: ['секунду', 'секунды', 'секунд'], kk: 'секунд', en: ['second', 'seconds'] },
   ];
   const unit = units.find((item) => diffSeconds >= item.seconds) ?? units[units.length - 1];
   const value = Math.floor(diffSeconds / unit.seconds);
 
   if (lang === 'en') return `${value} ${value === 1 ? unit.en[0] : unit.en[1]} ago`;
-  if (lang === 'kk') return `${value} ${unit.kk} Р±Т±СЂС‹РЅ`;
-  return `${value} ${pluralRu(value, unit.ru[0], unit.ru[1], unit.ru[2])} РЅР°Р·Р°Рґ`;
+  if (lang === 'kk') return `${value} ${unit.kk} бұрын`;
+  return `${value} ${pluralRu(value, unit.ru[0], unit.ru[1], unit.ru[2])} назад`;
 }
 
 export default function App() {
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const events: TeamEvent[] = [];
-  const [uiLanguage, setUiLanguage] = useState('Русский');
+  const [uiLanguage] = useState('Русский');
   const [people, setPeople] = useState<Player[]>(demoPlayers);
   const [saveMessage, setSaveMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!supabase);
   const [visualProfile, setVisualProfile] = useState<UserVisualProfile | null>(null);
   const [authNotice, setAuthNotice] = useState('');
-  const [theme, setTheme] = useState<DesignTheme>('neon');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const theme: DesignTheme = 'pixel';
   const [activePage, setActivePage] = useState<AppPage>(() => getPageFromLocation());
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [openPlayerMenuId, setOpenPlayerMenuId] = useState<string | null>(null);
   const [playerStatus, setPlayerStatus] = useState(() => localStorage.getItem(PLAYER_STATUS_KEY) || playerStatuses[0]);
   const [profileSearch, setProfileSearch] = useState('');
   const [filterGame, setFilterGame] = useState('');
-  const [filterLanguage, setFilterLanguage] = useState('');
-  const [filterMic, setFilterMic] = useState('any');
-  const [filterAgeMin, setFilterAgeMin] = useState('');
-  const [filterAgeMax, setFilterAgeMax] = useState('');
   const [loadedProfileId, setLoadedProfileId] = useState('');
   const [selectedPlayerId, setSelectedPlayerId] = useState(() => {
     const match = window.location.pathname.match(/^\/player\/([^/]+)/);
@@ -1913,6 +1979,7 @@ export default function App() {
   const [profileContactPrivate, setProfileContactPrivate] = useState(true);
   const [reputation, setReputation] = useState<Record<string, Record<string, number>>>(() => getStoredReputation());
   const [reportedIds, setReportedIds] = useState<string[]>([]);
+  const [reportRecords, setReportRecords] = useState<Record<string, ProfileReportRecord>>(() => getStoredReportRecords());
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [readChatTimes, setReadChatTimes] = useState<Record<string, string>>({});
   const [clearChatTimes, setClearChatTimes] = useState<Record<string, string>>({});
@@ -1923,12 +1990,37 @@ export default function App() {
   const [reviewRating, setReviewRating] = useState('5');
   const [reviewBody, setReviewBody] = useState('');
   const [reviewMessage, setReviewMessage] = useState('');
+  const [playerReviews, setPlayerReviews] = useState<PlayerReview[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(PLAYER_REVIEWS_KEY) || '[]') as PlayerReview[];
+    } catch {
+      localStorage.removeItem(PLAYER_REVIEWS_KEY);
+      return [];
+    }
+  });
+  const [playerReviewTargetId, setPlayerReviewTargetId] = useState(playerReviewBotTargets[0].id);
+  const [playerReviewRating, setPlayerReviewRating] = useState('5');
+  const [playerReviewBody, setPlayerReviewBody] = useState('');
+  const [playerReviewMessage, setPlayerReviewMessage] = useState('');
   const [shopState, setShopState] = useState<ShopState>(() => getStoredShopState());
   const [shopTab, setShopTab] = useState<ShopTab>('avatars');
+  const [geminiInput, setGeminiInput] = useState('');
+  const [geminiLoading, setGeminiLoading] = useState(false);
+  const [geminiMessages, setGeminiMessages] = useState<GeminiMessage[]>([
+    {
+      role: 'assistant',
+      text: 'Привет! Я TeamUp AI. Могу подобрать игроков, улучшить анкету, подсказать квесты, магазин и турниры.',
+    },
+  ]);
+  const [waitGameScore, setWaitGameScore] = useState(0);
+  const [waitGameBest, setWaitGameBest] = useState(() => Number(localStorage.getItem('teamup-wait-game-best') || '0'));
+  const [waitGameTarget, setWaitGameTarget] = useState(() => ({
+    x: Math.round(14 + Math.random() * 72),
+    y: Math.round(18 + Math.random() * 58),
+  }));
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
   const [replyDrafts, setReplyDrafts] = useState<Record<string, ReplyTarget | undefined>>({});
   const [chatNotice, setChatNotice] = useState('');
-  const authPanelRef = useRef<HTMLDivElement>(null);
   const profilePanelRef = useRef<HTMLFormElement>(null);
   const matchesPanelRef = useRef<HTMLElement>(null);
   const activeUiLanguage = getUiLanguage(uiLanguage);
@@ -1961,13 +2053,6 @@ export default function App() {
     home: {
       title: t.navHome,
       text: activeUiLanguage === 'en' ? 'Start here.' : 'Начальная страница.',
-    },
-    games: {
-      title: activeUiLanguage === 'en' ? 'Games' : 'Игры',
-      text:
-        activeUiLanguage === 'en'
-          ? 'Pick a game and jump into players, chats, and profiles for that community.'
-          : 'Выбери игру и сразу открой игроков, чаты и анкеты этого сообщества.',
     },
     matches: {
       title: t.navMatches,
@@ -2007,6 +2092,13 @@ export default function App() {
         activeUiLanguage === 'en'
           ? 'Earn XP from quests and buy avatar items.'
           : 'Зарабатывай XP за квесты и покупай предметы для аватарки.',
+    },
+    gemini: {
+      title: 'TeamUp AI',
+      text:
+        activeUiLanguage === 'en'
+          ? 'Ask TeamUp AI for teammates, profile text, quests, tournaments, and site improvements.'
+          : 'Спроси TeamUp AI про игроков, анкету, квесты, турниры и улучшения сайта.',
     },
   };
   const availableIconOptions = useMemo(() => {
@@ -2121,12 +2213,29 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
+    if (!authModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setAuthModalOpen(false);
+    }
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [authModalOpen]);
+
+  useEffect(() => {
     if (!authReady) return;
 
-    if (!user && !['home', 'games', 'player'].includes(activePage)) {
+    if (!user && !['home', 'profile', 'player'].includes(activePage)) {
       if (window.location.pathname !== pagePaths.home) window.history.replaceState({}, '', pagePaths.home);
       setActivePage('home');
-      setAuthNotice(t.loginRequired);
+      requestAuth(t.loginRequired);
     }
   }, [activePage, authReady, t.loginRequired, user]);
 
@@ -2301,29 +2410,29 @@ export default function App() {
     loadMessages();
   }, [clearChatTimes, openChatId]);
 
+  const bannedProfileIds = useMemo(
+    () => Object.values(reportRecords).filter((record) => getActiveBan(record)).map((record) => record.playerId),
+    [reportRecords],
+  );
+  const bannedProfileIdSet = useMemo(() => new Set(bannedProfileIds), [bannedProfileIds]);
+
   const matches = useMemo(
     () =>
       people
         .filter((player) => !user || player.ownerId !== user.id)
+        .filter((player) => !bannedProfileIdSet.has(player.id))
         .filter((player) => !reportedIds.includes(player.id) && !blockedIds.includes(player.id))
         .filter((player) => profileMatchesSearch(player, profileSearch))
         .filter((player) => !filterGame.trim() || sameText(player.game, filterGame))
-        .filter((player) => !filterLanguage.trim() || sameText(player.language, filterLanguage))
-        .filter((player) => filterMic === 'any' || player.mic === (filterMic === 'yes'))
-        .filter((player) => !filterAgeMin || player.age >= Number(filterAgeMin))
-        .filter((player) => !filterAgeMax || player.age <= Number(filterAgeMax))
         .filter((player) => !contactsOnly || contactIds.includes(player.id))
         .map((player) => ({ ...player, match: scorePlayer(player, profile) }))
         .sort((a, b) => b.match - a.match),
     [
       blockedIds,
+      bannedProfileIdSet,
       contactIds,
       contactsOnly,
-      filterAgeMax,
-      filterAgeMin,
       filterGame,
-      filterLanguage,
-      filterMic,
       people,
       profile,
       profileSearch,
@@ -2350,7 +2459,7 @@ export default function App() {
     const stats = new Map<string, { game: string; players: number; online: number; languages: Set<string> }>();
 
     people.forEach((player) => {
-      if (reportedIds.includes(player.id) || blockedIds.includes(player.id)) return;
+      if (reportedIds.includes(player.id) || blockedIds.includes(player.id) || bannedProfileIdSet.has(player.id)) return;
       const current = stats.get(player.game) ?? { game: player.game, players: 0, online: 0, languages: new Set<string>() };
       current.players += 1;
       if (getPresenceStatus(player, 'en') === 'online') current.online += 1;
@@ -2359,11 +2468,15 @@ export default function App() {
     });
 
     return Array.from(stats.values()).sort((a, b) => b.players - a.players);
-  }, [blockedIds, people, reportedIds]);
+  }, [bannedProfileIdSet, blockedIds, people, reportedIds]);
 
   const selectedPlayer = useMemo(
-    () => people.find((player) => player.id === selectedPlayerId) ?? null,
-    [people, selectedPlayerId],
+    () => {
+      const player = people.find((person) => person.id === selectedPlayerId) ?? null;
+      if (!player || bannedProfileIdSet.has(player.id)) return null;
+      return player;
+    },
+    [bannedProfileIdSet, people, selectedPlayerId],
   );
 
   const chatSummaries = useMemo(() => {
@@ -2382,10 +2495,10 @@ export default function App() {
         player: people.find((person) => person.id === profileId),
         profileId,
       }))
-      .filter((item) => !blockedIds.includes(item.profileId) && !reportedIds.includes(item.profileId))
+      .filter((item) => !blockedIds.includes(item.profileId) && !reportedIds.includes(item.profileId) && !bannedProfileIdSet.has(item.profileId))
       .filter((item) => item.player)
       .sort((a, b) => new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime());
-  }, [allMessages, blockedIds, people, reportedIds]);
+  }, [allMessages, bannedProfileIdSet, blockedIds, people, reportedIds]);
 
   const unreadChatCount = useMemo(
     () =>
@@ -2485,6 +2598,39 @@ export default function App() {
   }
 
   function reportProfile(id: string) {
+    const reporterKey = user?.id ?? user?.email ?? getAnonymousReporterKey();
+
+    setReportRecords((current) => {
+      const record = current[id] ?? {
+        playerId: id,
+        totalReports: 0,
+        banLevel: 0,
+        reporterKeys: [],
+      };
+
+      if (record.reporterKeys.includes(reporterKey)) return current;
+
+      const totalReports = record.totalReports + 1;
+      const shouldBan = record.banLevel < REPORT_BAN_STEPS.length && totalReports >= (record.banLevel + 1) * 5;
+      const banStep = shouldBan ? REPORT_BAN_STEPS[record.banLevel] : null;
+      const nextRecord: ProfileReportRecord = {
+        ...record,
+        totalReports,
+        banLevel: shouldBan ? record.banLevel + 1 : record.banLevel,
+        reporterKeys: [...record.reporterKeys, reporterKey],
+        bannedUntil: banStep?.durationMs ? new Date(Date.now() + banStep.durationMs).toISOString() : record.bannedUntil,
+        permanent: banStep ? banStep.durationMs === null : record.permanent,
+      };
+      const next = { ...current, [id]: nextRecord };
+      localStorage.setItem(REPORT_RULES_KEY, JSON.stringify(next));
+      setSaveMessage(
+        banStep
+          ? `Жалоба принята. Игрок получил бан: ${banStep.label}.`
+          : `Жалоба принята. До следующего бана нужно ${Math.max(0, (record.banLevel + 1) * 5 - totalReports)} жалоб.`,
+      );
+      return next;
+    });
+
     setReportedIds((current) => {
       const next = current.includes(id) ? current : [...current, id];
       localStorage.setItem(REPORTS_KEY, JSON.stringify(next));
@@ -2560,7 +2706,7 @@ export default function App() {
 
     if (!user) {
       setChatNotice(t.chatLoginRequired);
-      authPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      requestAuth(t.chatLoginRequired);
       return;
     }
 
@@ -2607,8 +2753,7 @@ export default function App() {
     event.preventDefault();
 
     if (!user) {
-      setAuthNotice(t.loginRequired);
-      setActivePage('home');
+      requestAuth(t.loginRequired);
       return;
     }
 
@@ -2654,6 +2799,31 @@ export default function App() {
     setReviewMessage(t.reviewSaved);
   }
 
+  function savePlayerReviews(nextReviews: PlayerReview[]) {
+    setPlayerReviews(nextReviews);
+    localStorage.setItem(PLAYER_REVIEWS_KEY, JSON.stringify(nextReviews));
+  }
+
+  function publishPlayerReview(event: FormEvent) {
+    event.preventDefault();
+    const body = playerReviewBody.trim();
+    if (!body) return;
+
+    const nextReview: PlayerReview = {
+      id: crypto.randomUUID(),
+      playerId: playerReviewTargetId,
+      authorName: user ? displayNameFromUser(user, visualProfile) : 'Гость',
+      rating: Math.min(5, Math.max(1, Number(playerReviewRating) || 5)),
+      body,
+      createdAt: new Date().toISOString(),
+    };
+
+    savePlayerReviews([nextReview, ...playerReviews]);
+    setPlayerReviewBody('');
+    setPlayerReviewRating('5');
+    setPlayerReviewMessage('Отзыв игроку добавлен.');
+  }
+
   async function removeReview(id: string) {
     if (!user) return;
 
@@ -2668,9 +2838,8 @@ export default function App() {
   async function publishProfile(event: FormEvent) {
     event.preventDefault();
     if (!user) {
-      setAuthNotice(t.loginRequired);
+      requestAuth(t.loginRequired);
       setSaveMessage(t.loginRequired);
-      authPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
 
@@ -2759,12 +2928,18 @@ export default function App() {
     setSaveMessage(t.profileDeleted);
   }
 
+  function requestAuth(notice = t.loginRequired) {
+    setAuthNotice(notice);
+    setAuthModalOpen(true);
+    setMenuOpen(false);
+  }
+
   function openPage(page: AppPage) {
-    if (!user && !['home', 'games', 'player'].includes(page)) {
+    if (!user && !['home', 'profile', 'player', 'gemini'].includes(page)) {
       if (window.location.pathname !== pagePaths.home) window.history.pushState({}, '', pagePaths.home);
       setActivePage('home');
-      setAuthNotice(t.loginRequired);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setMenuOpen(false);
+      requestAuth(t.loginRequired);
       return;
     }
 
@@ -2773,18 +2948,198 @@ export default function App() {
       window.history.pushState({}, '', pagePaths[page]);
     }
     setActivePage(page);
+    setMenuOpen(false);
+    setOpenPlayerMenuId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function sendGeminiMessage(event: FormEvent) {
+    event.preventDefault();
+    const prompt = geminiInput.trim();
+    if (!prompt || geminiLoading) return;
+
+    const nextMessages: GeminiMessage[] = [...geminiMessages, { role: 'user', text: prompt }];
+    setGeminiMessages(nextMessages);
+    setGeminiInput('');
+    setGeminiLoading(true);
+
+    try {
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          siteContext: {
+            siteName: 'TeamUp',
+            purpose: 'Сайт для поиска напарников в игры: анкеты игроков, фильтры, контакты, чаты, отзывы, магазин, XP, квесты и аватарки.',
+            activePage,
+            pages: navItems.map((item) => item.label),
+            user: user
+              ? {
+                  signedIn: true,
+                  name: displayNameFromUser(user, visualProfile),
+                  email: user.email,
+                }
+              : { signedIn: false, name: 'Guest' },
+            stats: {
+              profiles: people.length,
+              visibleMatches: matches.length,
+              reviews: reviews.length,
+              chats: chatSummaries.length,
+              contacts: contactIds.length,
+              blocked: blockedIds.length,
+              reports: reportedIds.length,
+            },
+            shop: {
+              xp: shopState.xp,
+              level: levelInfo.level,
+              rank: levelInfo.rankShort,
+              completedQuests: shopState.completedQuests.length,
+              totalQuests: questItems.length,
+              ownedItems: shopState.ownedItems.length,
+              activeBackground: shopState.activeBackground || 'bg-classic',
+              dailyRewardAvailable: !dailyRewardClaimed,
+              bestAffordableAvatarItems: avatarShopItems
+                .filter((item) => !shopState.ownedItems.includes(item.id) && item.price <= shopState.xp)
+                .sort((left, right) => right.price - left.price)
+                .slice(0, 8)
+                .map((item) => ({
+                  id: item.id,
+                  title: item.title,
+                  price: item.price,
+                  rarity: getItemRarity(item.price).label,
+                })),
+              nextAvatarGoals: avatarShopItems
+                .filter((item) => !shopState.ownedItems.includes(item.id) && item.price > shopState.xp)
+                .sort((left, right) => left.price - right.price)
+                .slice(0, 6)
+                .map((item) => ({
+                  id: item.id,
+                  title: item.title,
+                  price: item.price,
+                  needXp: item.price - shopState.xp,
+                  rarity: getItemRarity(item.price).label,
+                })),
+              affordableBackgrounds: backgroundShopItems
+                .filter((item) => item.price <= shopState.xp)
+                .slice(0, 10)
+                .map((item) => ({ id: item.id, title: item.title, price: item.price })),
+            },
+              filters: {
+                search: profileSearch,
+                game: filterGame,
+                contactsOnly,
+              },
+            topGames: gameStats.slice(0, 6).map((item) => ({
+              game: item.game,
+              online: item.online,
+            })),
+            recommendedPlayers: recommendedPlayers.map((player) => ({
+              name: player.anonymous ? t.anonymousPlayer : player.name,
+              id: player.id,
+              game: player.game,
+              platform: player.platform,
+              style: player.style,
+              region: player.region,
+              time: player.time,
+              rank: player.rank,
+              mic: player.mic,
+              contactSaved: contactIds.includes(player.id),
+            })),
+            nextQuests: questItems
+              .filter((quest) => quest.difficulty !== 'secret' && !shopState.completedQuests.includes(quest.id))
+              .slice(0, 5)
+              .map((quest) => ({
+                title: activeUiLanguage === 'en' ? quest.titleEn : quest.titleRu,
+                reward: quest.reward,
+                difficulty: quest.difficulty,
+              })),
+          },
+        }),
+      });
+      const result = (await response.json()) as { text?: string; error?: string };
+
+      setGeminiMessages([
+        ...nextMessages,
+        {
+          role: 'assistant',
+          text: result.text || result.error || 'TeamUp AI не ответил. Проверь настройки API.',
+        },
+      ]);
+    } catch {
+      setGeminiMessages([...nextMessages, { role: 'assistant', text: 'Не получилось подключиться к TeamUp AI.' }]);
+    } finally {
+      setGeminiLoading(false);
+    }
   }
 
   function openPlayerProfile(id: string) {
     setSelectedPlayerId(id);
     setAuthNotice('');
+    setAuthModalOpen(false);
     const path = `/player/${encodeURIComponent(id)}`;
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
     }
     setActivePage('player');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function moveWaitGameTarget() {
+    setWaitGameTarget({
+      x: Math.round(12 + Math.random() * 76),
+      y: Math.round(16 + Math.random() * 62),
+    });
+  }
+
+  function hitWaitGameTarget() {
+    const nextScore = waitGameScore + 1;
+    setWaitGameScore(nextScore);
+
+    if (nextScore > waitGameBest) {
+      setWaitGameBest(nextScore);
+      localStorage.setItem('teamup-wait-game-best', String(nextScore));
+    }
+
+    moveWaitGameTarget();
+  }
+
+  function resetWaitGame() {
+    setWaitGameScore(0);
+    moveWaitGameTarget();
+  }
+
+  function renderWaitingGame() {
+    return (
+      <aside className="waiting-game" aria-label="Мини-игра ожидания">
+        <div className="waiting-game__top">
+          <div>
+            <span>Пока ждешь</span>
+            <h3>Поймай XP</h3>
+          </div>
+          <strong>{waitGameScore}</strong>
+        </div>
+
+        <div className="waiting-game__arena">
+          <button
+            className="waiting-game__target"
+            type="button"
+            style={{ left: `${waitGameTarget.x}%`, top: `${waitGameTarget.y}%` }}
+            onClick={hitWaitGameTarget}
+            aria-label="Поймать XP"
+          >
+            XP
+          </button>
+        </div>
+
+        <div className="waiting-game__bottom">
+          <span>Лучший: {waitGameBest}</span>
+          <button type="button" onClick={resetWaitGame}>
+            Сброс
+          </button>
+        </div>
+      </aside>
+    );
   }
 
   function renderChatBox(player: Player) {
@@ -2808,7 +3163,7 @@ export default function App() {
           </div>
           <div>
             <b>{getDisplayName(player, t.anonymousPlayer)}</b>
-            <span>{player.game} В· {label(player.language, activeUiLanguage)}</span>
+            <span>{player.game} · {label(player.language, activeUiLanguage)}</span>
           </div>
         </div>
 
@@ -2896,10 +3251,6 @@ export default function App() {
   const filterValues = {
     search: profileSearch.trim(),
     game: filterGame.trim(),
-    language: filterLanguage.trim(),
-    mic: filterMic !== 'any' ? filterMic : '',
-    ageMin: filterAgeMin,
-    ageMax: filterAgeMax,
   };
   const usedFilterCount = Object.values(filterValues).filter(Boolean).length;
   const completedQuestCount = questItems.filter((quest) => shopState.completedQuests.includes(quest.id)).length;
@@ -2997,7 +3348,7 @@ export default function App() {
     { label: 'Легенда TeamUp', unlocked: levelInfo.level >= 20 },
   ].filter((badge) => badge.unlocked);
   const leaderboardPlayers = people
-    .filter((player) => !reportedIds.includes(player.id) && !blockedIds.includes(player.id))
+    .filter((player) => !reportedIds.includes(player.id) && !blockedIds.includes(player.id) && !bannedProfileIdSet.has(player.id))
     .map((player) => {
       const playerReputation = reputation[player.id] ?? {};
       const reputationScore = Object.values(playerReputation).reduce((total, value) => total + value, 0);
@@ -3018,20 +3369,7 @@ export default function App() {
       items: avatarShopItems.filter((item) => getItemRarity(item.price).id === section.id),
     }))
     .filter((section) => section.items.length > 0);
-  const onboardingSteps = [
-    { title: '1. Анкета', text: myProfiles.length > 0 ? 'Готово' : 'Создай профиль игрока', done: myProfiles.length > 0, page: 'profile' as AppPage },
-    { title: '2. Игроки', text: contactIds.length > 0 ? `${contactIds.length} контактов` : 'Найди тиммейтов', done: contactIds.length > 0, page: 'matches' as AppPage },
-    { title: '3. Чат', text: sentMessageCount > 0 ? `${sentMessageCount} сообщений` : 'Напиши первое сообщение', done: sentMessageCount > 0, page: 'chats' as AppPage },
-    { title: '4. XP', text: `${shopState.completedQuests.length} квестов`, done: shopState.completedQuests.length > 0, page: 'shop' as AppPage },
-  ];
   const recommendedPlayers = matches.slice(0, 4);
-  const seasonProgress = Math.min(100, Math.round(((shopState.completedQuests.length * 6) + levelInfo.level * 3) % 101));
-  const smartNotifications = [
-    unreadChatCount > 0 ? `${unreadChatCount} новых сообщений` : '',
-    dailyRewardClaimed ? '' : 'Ежедневный бонус XP доступен',
-    recommendedPlayers.length > 0 ? `${recommendedPlayers.length} игроков подходят тебе` : '',
-    shopState.ownedItems.length > 0 ? `${shopState.ownedItems.length} вещей в инвентаре` : '',
-  ].filter(Boolean);
   const teamRooms = gameStats.slice(0, 6).map((item, index) => ({
     id: `${item.game}-${index}`,
     title: `${item.game} · ${index % 2 === 0 ? 'Squad' : 'Duo'}`,
@@ -3040,19 +3378,29 @@ export default function App() {
     mode: index % 3 === 0 ? 'Ranked' : index % 3 === 1 ? 'Chill' : 'Voice',
     online: item.online,
   }));
+  const playerReviewTargets: PlayerReviewTarget[] = [
+    ...playerReviewBotTargets,
+    ...people.map((player) => ({
+      id: player.id,
+      name: getDisplayName(player, t.anonymousPlayer),
+      game: player.game,
+      rank: player.rank,
+      color: player.color,
+    })),
+  ];
   const inventoryItems = avatarShopItems.filter((item) => shopState.ownedItems.includes(item.id));
-  const inventoryBackgrounds = backgroundShopItems.filter((item) => shopState.ownedItems.includes(item.id) || item.id === shopState.activeBackground);
   const navItems: Array<{ page: AppPage; label: string; locked?: boolean; badge?: number }> = [
     { page: 'home', label: t.navHome },
-    { page: 'games', label: activeUiLanguage === 'en' ? 'Games' : 'Игры' },
     { page: 'matches', label: t.navMatches, locked: !user },
     { page: 'profile', label: t.navProfile, locked: !user },
     { page: 'chats', label: t.navChats, locked: !user, badge: unreadChatCount },
     { page: 'reviews', label: t.navReviews, locked: !user },
     { page: 'shop', label: extraUi.shop, locked: !user },
+    { page: 'gemini', label: 'TeamUp AI' },
   ];
   const primaryPage: AppPage = user ? 'matches' : 'profile';
   const primaryLabel = user ? t.navMatches : t.navProfile;
+  const authActionLabel = user ? (activeUiLanguage === 'en' ? 'Account' : 'Аккаунт') : (activeUiLanguage === 'en' ? 'Log in' : 'Войти');
 
   return (
     <main className="app-shell" data-theme={theme} data-shop-bg={shopState.activeBackground}>
@@ -3065,7 +3413,19 @@ export default function App() {
           </span>
         </button>
 
-        <nav className="app-nav" aria-label="TeamUp pages">
+        <button
+          className="menu-toggle"
+          type="button"
+          aria-label="Открыть вкладки"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((current) => !current)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <nav className={menuOpen ? 'app-nav is-open' : 'app-nav'} aria-label="TeamUp pages">
           {navItems.map((item) => (
             <button
               key={item.page}
@@ -3091,48 +3451,50 @@ export default function App() {
           <span className={user ? 'status-badge status-badge--online' : 'status-badge'}>
             {user ? 'Online' : 'Guest'}
           </span>
+          <button className="auth-header-button" type="button" onClick={() => requestAuth(user ? '' : t.loginRequired)}>
+            {authActionLabel}
+          </button>
           <button className="primary-nav-action" type="button" onClick={() => openPage(primaryPage)}>
             {primaryLabel}
           </button>
         </div>
       </header>
 
-      <section className={activePage === 'home' ? `hero ${user ? '' : 'hero--auth'}` : 'hero is-hidden'}>
+      {authModalOpen && (
+        <div className="auth-modal" role="dialog" aria-modal="true" aria-label={authActionLabel} onMouseDown={() => setAuthModalOpen(false)}>
+          <div className="auth-modal__dialog" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="auth-modal__close" type="button" aria-label="Close login" onClick={() => setAuthModalOpen(false)}>
+              X
+            </button>
+            <Auth
+              user={user}
+              notice={authNotice}
+              language={activeUiLanguage}
+              visualProfile={visualProfile}
+              iconOptions={availableIconOptions}
+              onVisualProfileChange={saveVisualProfile}
+            />
+          </div>
+        </div>
+      )}
+
+      <section className={activePage === 'home' ? 'hero' : 'hero is-hidden'}>
         <div className="hero__content">
           <div className="hero__header">
-            <div className="brand">
-              <span className="brand__mark">TU</span>
-              <span>TeamUp</span>
-            </div>
-
-            <label className="language-menu">
-              {t.formLanguage}
-              <input
-                list="form-languages"
-                className={looksLikeTypo(uiLanguage, formLanguageOptions) ? 'field-error' : undefined}
-                placeholder={t.languageInputPlaceholder}
-                value={uiLanguage}
-                onChange={(event) => setUiLanguage(event.target.value)}
-              />
-              {looksLikeTypo(uiLanguage, formLanguageOptions) && <span className="field-hint">{t.typoPick}</span>}
-              <datalist id="form-languages">
-                {formLanguageOptions.map((language) => (
-                  <option key={language} value={language} />
-                ))}
-              </datalist>
-            </label>
-
-            <div className="theme-picker" aria-label="Design theme">
-              {designThemes.map((item) => (
+            <div className="home-background-switch" aria-label="Фон сайта">
+              {backgroundShopItems.map((item) => {
+                const active = shopState.activeBackground === item.id || (!shopState.activeBackground && item.id === 'bg-classic');
+                return (
                 <button
                   key={item.id}
                   type="button"
-                  className={theme === item.id ? 'theme-picker__button is-active' : 'theme-picker__button'}
-                  onClick={() => setTheme(item.id)}
+                  className={active ? 'is-active' : undefined}
+                  onClick={() => equipBackground(item.id)}
                 >
-                  {item.label}
+                  {item.id === 'bg-classic' ? 'Classic' : 'Black'}
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
           <h1>{t.heroTitle}</h1>
@@ -3152,9 +3514,9 @@ export default function App() {
                 <b>{myProfiles.length > 0 ? 'Анкета готова' : 'Создай анкету'}</b>
                 <span>{myProfiles.length > 0 ? profile.game || 'TeamUp' : 'Заполни профиль игрока'}</span>
               </button>
-              <button type="button" onClick={() => openPage('games')}>
-                <b>{gameStats.length || gameOptions.length} игр</b>
-                <span>Открой подбор по игре</span>
+              <button type="button" onClick={() => openPage('matches')}>
+                <b>{matches.length} игроков</b>
+                <span>Открой поиск команды</span>
               </button>
               <button type="button" onClick={() => openPage('chats')}>
                 <b>{unreadChatCount} новых</b>
@@ -3198,68 +3560,7 @@ export default function App() {
               </article>
             </section>
           )}
-          {user && (
-            <section className="home-command-center" aria-label="TeamUp command center">
-              <article className="onboarding-panel">
-                <div className="mini-section-head">
-                  <span>Start</span>
-                  <h2>Что делать дальше</h2>
-                </div>
-                <div className="onboarding-steps">
-                  {onboardingSteps.map((step) => (
-                    <button key={step.title} type="button" className={step.done ? 'is-done' : undefined} onClick={() => openPage(step.page)}>
-                      <b>{step.done ? '✓' : '•'}</b>
-                      <span>{step.title}</span>
-                      <small>{step.text}</small>
-                    </button>
-                  ))}
-                </div>
-              </article>
-
-              <article className="season-panel">
-                <div className="mini-section-head">
-                  <span>Season 1</span>
-                  <h2>Summer TeamUp</h2>
-                </div>
-                <div className="level-progress"><span style={{ width: `${seasonProgress}%` }} /></div>
-                <p>{seasonProgress}% сезона · награды за квесты, XP и магазин</p>
-              </article>
-
-              <article className="notifications-panel">
-                <div className="mini-section-head">
-                  <span>Alerts</span>
-                  <h2>Уведомления</h2>
-                </div>
-                {smartNotifications.length === 0 ? (
-                  <p>Пока всё спокойно. Выполни квест или найди игрока.</p>
-                ) : (
-                  smartNotifications.map((notice) => <p key={notice}>{notice}</p>)
-                )}
-              </article>
-
-              <article className="recommendations-panel">
-                <div className="mini-section-head">
-                  <span>For you</span>
-                  <h2>Лучшие для тебя</h2>
-                </div>
-                <div className="recommendation-list">
-                  {recommendedPlayers.length === 0 ? (
-                    <p>Создай анкету, и здесь появятся подходящие игроки.</p>
-                  ) : (
-                    recommendedPlayers.map((player) => (
-                      <button key={player.id} type="button" onClick={() => openPlayerProfile(player.id)}>
-                        <span className="mini-avatar" style={{ backgroundColor: player.color }}>{getDisplayName(player, t.anonymousPlayer).slice(0, 2)}</span>
-                        <span>
-                          <b>{getDisplayName(player, t.anonymousPlayer)}</b>
-                          <small>{player.game} · {player.match}% · {player.region}</small>
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </article>
-            </section>
-          )}
+          {!user && (
           <section className="hero-guide" aria-label={t.guideTitle}>
             <h2>{t.guideTitle}</h2>
             <ol>
@@ -3269,48 +3570,13 @@ export default function App() {
               <li>{t.guideStep4}</li>
             </ol>
           </section>
-          <section className="home-backgrounds" aria-label={extraUi.backgrounds}>
-            <div>
-              <h2>{extraUi.backgrounds}</h2>
-              <span>{shopState.activeBackground || 'Classic'}</span>
-            </div>
-            <div className="home-backgrounds__list">
-              {backgroundShopItems.map((item) => {
-                const active = shopState.activeBackground === item.id || (!shopState.activeBackground && item.id === 'bg-classic');
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={active ? 'is-active' : undefined}
-                    title={item.title}
-                    onClick={() => equipBackground(item.id)}
-                  >
-                    <span className={`background-preview ${item.id}`} />
-                    <small>{item.title}</small>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-          {!user && (
-            <div className="home-auth">
-              <Auth
-                user={user}
-                notice={authNotice}
-                language={activeUiLanguage}
-                visualProfile={visualProfile}
-                iconOptions={availableIconOptions}
-                onVisualProfileChange={saveVisualProfile}
-              />
-            </div>
           )}
         </div>
         <div className="hero__visual" aria-hidden="true">
-          <div className="game-card game-card--red">Valorant</div>
-          <div className="game-card game-card--green">Minecraft</div>
-          <div className="game-card game-card--blue">CS2</div>
-          <div className="game-card game-card--yellow">Roblox</div>
+          <div className="game-card game-card--red"><span>Valorant</span></div>
+          <div className="game-card game-card--green"><span>Minecraft</span></div>
+          <div className="game-card game-card--blue"><span>CS2</span></div>
+          <div className="game-card game-card--yellow"><span>Roblox</span></div>
           <div className="hero-console">
             <span>ONLINE</span>
             <b>TeamUp</b>
@@ -3333,17 +3599,6 @@ export default function App() {
 
         {activePage === 'profile' && (
         <div className="sidebar-stack page-only">
-          <div ref={authPanelRef}>
-          <Auth
-            user={user}
-            notice={authNotice}
-            language={activeUiLanguage}
-            visualProfile={visualProfile}
-            iconOptions={availableIconOptions}
-            onVisualProfileChange={saveVisualProfile}
-          />
-          </div>
-
         <form ref={profilePanelRef} className="panel search-panel" onSubmit={publishProfile}>
           <div className="section-title">
             <span>01</span>
@@ -3621,72 +3876,6 @@ export default function App() {
         </div>
         )}
 
-        {activePage === 'games' && (
-        <section className="panel games-panel">
-          <div className="section-title">
-            <span>02</span>
-            <h2>{activeUiLanguage === 'en' ? 'Game hubs' : 'Игровые разделы'}</h2>
-          </div>
-
-          {gameStats.length > 0 && (
-            <section className="weekly-games">
-              <div className="mini-section-head">
-                <span>Top week</span>
-                <h2>Игры недели</h2>
-              </div>
-              <div className="weekly-games__list">
-                {gameStats.slice(0, 5).map((item, index) => (
-                  <button
-                    key={item.game}
-                    type="button"
-                    onClick={() => {
-                      setFilterGame(item.game);
-                      openPage('matches');
-                    }}
-                  >
-                    <b>#{index + 1}</b>
-                    <span>{item.game}</span>
-                    <small>{item.players} игроков</small>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {gameStats.length === 0 ? (
-            <p className="empty-state">
-              {activeUiLanguage === 'en'
-                ? 'No real profiles yet. Create the first one from Profile.'
-                : 'Пока нет анкет. Создай первую во вкладке анкеты.'}
-            </p>
-          ) : (
-            <div className="game-hub-grid">
-              {gameStats.map((item, index) => (
-                <article className="game-hub-card" key={item.game}>
-                  <span className={`game-hub-card__cover game-hub-card__cover--${(index % 6) + 1}`} />
-                  <div>
-                    <h3>{item.game}</h3>
-                    <p>
-                      {item.players} игроков · {item.online} онлайн · {item.languages.size} языков
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFilterGame(item.game);
-                      setProfileSearch('');
-                      openPage('matches');
-                    }}
-                  >
-                    {activeUiLanguage === 'en' ? 'Find players' : 'Найти игроков'}
-                  </button>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-        )}
-
         {activePage === 'matches' && (
         <section ref={matchesPanelRef} className="panel matches-panel">
           <div className="section-title">
@@ -3737,56 +3926,6 @@ export default function App() {
             <span>{t.favoritesOnly}</span>
           </label>
 
-          <div className="advanced-filters">
-            <label>
-              {t.game}
-              <input
-                list="games"
-                placeholder={t.gamePlaceholder}
-                value={filterGame}
-                onChange={(event) => setFilterGame(event.target.value)}
-              />
-            </label>
-            <label>
-              {t.communicationLanguage}
-              <input
-                list="languages"
-                placeholder={t.languagePlaceholder}
-                value={filterLanguage}
-                onChange={(event) => setFilterLanguage(event.target.value)}
-              />
-            </label>
-            <label>
-              {t.age}
-              <div className="range-fields">
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  placeholder="1"
-                  value={filterAgeMin}
-                  onChange={(event) => setFilterAgeMin(normalizeAge(event.target.value))}
-                />
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  placeholder="100"
-                  value={filterAgeMax}
-                  onChange={(event) => setFilterAgeMax(normalizeAge(event.target.value))}
-                />
-              </div>
-            </label>
-            <label>
-              {t.mic}
-              <select value={filterMic} onChange={(event) => setFilterMic(event.target.value)}>
-                <option value="any">{t.any}</option>
-                <option value="yes">{t.yes}</option>
-                <option value="no">{t.no}</option>
-              </select>
-            </label>
-          </div>
-
           <section className="events-board">
             <div className="section-title">
               <span>04</span>
@@ -3811,7 +3950,7 @@ export default function App() {
                       <span>{label(teamEvent.language, activeUiLanguage)}</span>
                     </div>
                     <small>
-                      {t.eventBy}: {teamEvent.author} В· {timeAgo(teamEvent.createdAt, activeUiLanguage)}
+                      {t.eventBy}: {teamEvent.author} · {timeAgo(teamEvent.createdAt, activeUiLanguage)}
                     </small>
                     <div className="event-actions">
                       <button type="button" onClick={() => setProfileSearch(teamEvent.game)}>
@@ -3835,6 +3974,9 @@ export default function App() {
               const isOwnProfile = Boolean(user && player.ownerId === user.id);
               const contactHidden = privateContactIds.includes(player.id) && !isOwnProfile && !contactIds.includes(player.id);
               const playerReputation = reputation[player.id] ?? {};
+              const playerReviews = getPlayerReviewPreviews(player);
+              const reportRecord = reportRecords[player.id];
+              const nextBanAt = ((reportRecord?.banLevel ?? 0) + 1) * 5;
 
               return (
               <article className="player-card" key={player.id}>
@@ -3845,7 +3987,7 @@ export default function App() {
                   <div>
                     <h3>{getDisplayName(player, t.anonymousPlayer)}</h3>
                     <p>
-                      {player.age} {t.years} В· {player.game} В· {player.rank}
+                      {player.age} {t.years} · {player.game} · {player.rank}
                     </p>
                   </div>
                   {isOwnProfile ? (
@@ -3853,9 +3995,74 @@ export default function App() {
                   ) : (
                     <strong>{player.match}%</strong>
                   )}
+                  {!isOwnProfile && (
+                    <div className="player-menu">
+                      <button
+                        type="button"
+                        className="player-menu__toggle"
+                        aria-label="Действия игрока"
+                        aria-expanded={openPlayerMenuId === player.id}
+                        onClick={() => setOpenPlayerMenuId((current) => (current === player.id ? null : player.id))}
+                      >
+                        <span />
+                        <span />
+                        <span />
+                      </button>
+                      {openPlayerMenuId === player.id && (
+                        <div className="player-action-menu" role="menu">
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              toggleChat(player.id);
+                              setOpenPlayerMenuId(null);
+                            }}
+                          >
+                            Открыть чат
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setPlayerReviewTargetId(player.id);
+                              openPage('reviews');
+                            }}
+                          >
+                            Оставить отзыв
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              reportProfile(player.id);
+                              setOpenPlayerMenuId(null);
+                            }}
+                          >
+                            Пожаловаться
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              blockProfile(player.id);
+                              setOpenPlayerMenuId(null);
+                            }}
+                          >
+                            Заблокировать
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <p className="player-about">{player.about}</p>
+
+                {reportRecord && reportRecord.totalReports > 0 && (
+                  <div className="report-status">
+                    Жалобы: {reportRecord.totalReports} / {nextBanAt}
+                  </div>
+                )}
 
                 <div className="details-list">
                   <span>
@@ -3896,6 +4103,7 @@ export default function App() {
                 </div>
 
                 <div className="reputation-line">
+                  <span className="reputation-line__title">Отзыв игроку:</span>
                   {[
                     ['team', 'Хороший тиммейт'],
                     ['calm', 'Не токсичный'],
@@ -3904,6 +4112,22 @@ export default function App() {
                     <button key={key} type="button" onClick={() => addReputation(player.id, key)}>
                       {labelText} · {playerReputation[key] ?? 0}
                     </button>
+                  ))}
+                </div>
+
+                <div className="player-review-preview">
+                  <div className="player-review-preview__title">
+                    <b>Отзывы игроков</b>
+                    <span>тестовые боты</span>
+                  </div>
+                  {playerReviews.map((review) => (
+                    <article key={review.id}>
+                      <div>
+                        <b>{review.authorName}</b>
+                        <span>{renderStars(review.rating)}</span>
+                      </div>
+                      <p>{review.body}</p>
+                    </article>
                   ))}
                 </div>
 
@@ -3951,7 +4175,7 @@ export default function App() {
                       </div>
                       <div>
                         <b>{getDisplayName(player, t.anonymousPlayer)}</b>
-                        <span>{player.game} В· {label(player.language, activeUiLanguage)}</span>
+                        <span>{player.game} · {label(player.language, activeUiLanguage)}</span>
                       </div>
                     </div>
 
@@ -4051,6 +4275,7 @@ export default function App() {
               const isOwnProfile = Boolean(user && selectedPlayer.ownerId === user.id);
               const contactHidden = privateContactIds.includes(selectedPlayer.id) && !isOwnProfile && !contactIds.includes(selectedPlayer.id);
               const playerReputation = reputation[selectedPlayer.id] ?? {};
+              const playerReviews = getPlayerReviewPreviews(selectedPlayer);
 
               return (
                 <article className="player-profile-card">
@@ -4092,6 +4317,7 @@ export default function App() {
                   </div>
 
                   <div className="reputation-line reputation-line--large">
+                    <span className="reputation-line__title">Отзыв игроку:</span>
                     {[
                       ['team', 'Хороший тиммейт'],
                       ['calm', 'Не токсичный'],
@@ -4102,6 +4328,23 @@ export default function App() {
                       </button>
                     ))}
                   </div>
+
+                  <section className="player-review-preview player-review-preview--large">
+                    <div className="player-review-preview__title">
+                      <b>Отзывы игроков</b>
+                      <span>тестовые боты для проверки</span>
+                    </div>
+                    {playerReviews.map((review) => (
+                      <article key={review.id}>
+                        <div>
+                          <b>{review.authorName}</b>
+                          <span>{renderStars(review.rating)}</span>
+                        </div>
+                        <p>{review.body}</p>
+                        <small>{timeAgo(review.createdAt, activeUiLanguage)}</small>
+                      </article>
+                    ))}
+                  </section>
 
                   <div className="player-profile-actions">
                     {!isOwnProfile && (
@@ -4136,6 +4379,8 @@ export default function App() {
             <span>03</span>
             <h2>{t.chatsTitle}</h2>
           </div>
+
+          {renderWaitingGame()}
 
           {chatSummaries.length === 0 ? (
             <p className="empty-state">{t.emptyChats}</p>
@@ -4367,7 +4612,7 @@ export default function App() {
                       <span>Your items</span>
                       <h3>Inventory</h3>
                     </div>
-                    <small>{inventoryItems.length} items · {inventoryBackgrounds.length} backgrounds</small>
+                    <small>{inventoryItems.length} items</small>
                   </div>
 
                   <section className="inventory-panel">
@@ -4397,26 +4642,80 @@ export default function App() {
                         </div>
                       )}
                     </div>
-
-                    <div className="inventory-block">
-                      <div className="mini-section-head">
-                        <span>Backgrounds</span>
-                        <h2>Фоны</h2>
-                      </div>
-                      <div className="inventory-bg-grid">
-                        {inventoryBackgrounds.map((item) => (
-                          <button key={item.id} type="button" className={shopState.activeBackground === item.id ? 'is-active' : undefined} onClick={() => equipBackground(item.id)}>
-                            <span className={`background-preview ${item.id}`} />
-                            <b>{item.title}</b>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                   </section>
                 </>
               )}
             </div>
           </div>
+        </section>
+        )}
+
+        {activePage === 'gemini' && (
+        <section className="panel gemini-panel">
+          <div className="section-title">
+            <span>AI</span>
+            <h2>TeamUp AI</h2>
+          </div>
+
+          <p className="gemini-site-note">
+            TeamUp AI видит контекст TeamUp: анкеты, рекомендации игроков, фильтры, XP, магазин, квесты, отзывы, чаты и турниры.
+          </p>
+
+          <div className="gemini-suggestion-grid" aria-label="Быстрые запросы TeamUp AI">
+            {[
+              'Кого мне выбрать из игроков?',
+              'Что лучше купить в магазине сейчас?',
+              'Какие квесты делать дальше?',
+              'Как улучшить мою анкету?',
+            ].map((question) => (
+              <button
+                key={question}
+                type="button"
+                onClick={() => setGeminiInput(question)}
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="ghost-action gemini-clear"
+            type="button"
+            onClick={() =>
+              setGeminiMessages([
+                {
+                  role: 'assistant',
+                  text: 'Чат очищен. Напиши новый вопрос для TeamUp AI.',
+                },
+              ])
+            }
+          >
+            Очистить чат
+          </button>
+
+          <div className="gemini-chat" aria-live="polite">
+            {geminiMessages.map((message, index) => (
+              <article className={`gemini-message gemini-message--${message.role}`} key={`${message.role}-${index}`}>
+                <strong>{message.role === 'user' ? 'Ты' : 'TeamUp AI'}</strong>
+                <p>{message.text}</p>
+              </article>
+            ))}
+          </div>
+
+          <form className="gemini-form" onSubmit={sendGeminiMessage}>
+            <label>
+              Вопрос для TeamUp AI
+              <textarea
+                rows={4}
+                placeholder="Например: придумай квесты для моего сайта"
+                value={geminiInput}
+                onChange={(event) => setGeminiInput(event.target.value)}
+              />
+            </label>
+            <button type="submit" disabled={geminiLoading}>
+              {geminiLoading ? 'Думает...' : 'Отправить'}
+            </button>
+          </form>
         </section>
         )}
 
@@ -4426,6 +4725,96 @@ export default function App() {
             <span>04</span>
             <h2>{t.reviewsTitle}</h2>
           </div>
+
+          <section className="player-reviews-board">
+            <div className="mini-section-head">
+              <span>Players</span>
+              <h2>Отзывы на игроков</h2>
+            </div>
+
+            <form className="player-review-form" onSubmit={publishPlayerReview}>
+              <label>
+                Игрок
+                <select value={playerReviewTargetId} onChange={(event) => setPlayerReviewTargetId(event.target.value)}>
+                  {playerReviewTargets.map((player) => (
+                    <option key={player.id} value={player.id}>
+                      {player.name} - {player.game}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="star-rating" aria-label="Оценка игрока">
+                <span>Оценка</span>
+                <div>
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      type="button"
+                      className={Number(playerReviewRating) >= rating ? 'is-active' : undefined}
+                      aria-label={`${rating} / 5`}
+                      onClick={() => setPlayerReviewRating(String(rating))}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label>
+                Твой отзыв игроку
+                <textarea
+                  maxLength={240}
+                  placeholder="Например: хороший тиммейт, не токсичит, зашел вовремя"
+                  value={playerReviewBody}
+                  onChange={(event) => setPlayerReviewBody(event.target.value)}
+                  required
+                />
+              </label>
+              <button type="submit">Оставить отзыв игроку</button>
+              {playerReviewMessage && <p className="save-message">{playerReviewMessage}</p>}
+            </form>
+
+            <div className="player-reviews-board__grid">
+                {playerReviewTargets.map((player) => {
+                  const writtenReviews = playerReviews.filter((review) => review.playerId === player.id);
+
+                  return (
+                  <article className="player-review-card" key={`reviews-page-${player.id}`}>
+                    <div className="player-review-card__player">
+                      <div className="avatar" style={{ backgroundColor: player.color }}>
+                        {player.name.slice(0, 2)}
+                      </div>
+                      <div>
+                        <b>{player.name}</b>
+                        <span>{player.game} · {player.rank}</span>
+                      </div>
+                    </div>
+
+                    {writtenReviews.map((review) => (
+                      <div className="player-review-card__review is-written" key={review.id}>
+                        <div>
+                          <b>{review.authorName}</b>
+                          <span>{renderStars(review.rating)}</span>
+                        </div>
+                        <p>{review.body}</p>
+                        <small>{timeAgo(review.createdAt, activeUiLanguage)}</small>
+                      </div>
+                    ))}
+
+                    {getPlayerReviewPreviews(player).map((review) => (
+                      <div className="player-review-card__review" key={review.id}>
+                        <div>
+                          <b>{review.authorName}</b>
+                          <span>{renderStars(review.rating)}</span>
+                        </div>
+                        <p>{review.body}</p>
+                        <small>{timeAgo(review.createdAt, activeUiLanguage)}</small>
+                      </div>
+                    ))}
+                  </article>
+                  );
+                })}
+            </div>
+          </section>
 
           <form className="review-form" onSubmit={publishReview}>
             <div className="star-rating" aria-label={t.reviewRating}>
