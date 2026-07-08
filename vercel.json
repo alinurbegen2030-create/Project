@@ -1,5 +1,14 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/games", "destination": "/index.html" },
+    { "source": "/matches", "destination": "/index.html" },
+    { "source": "/profile", "destination": "/index.html" },
+    { "source": "/player/(.*)", "destination": "/index.html" },
+    { "source": "/chats", "destination": "/index.html" },
+    { "source": "/reviews", "destination": "/index.html" },
+    { "source": "/shop", "destination": "/index.html" },
+    { "source": "/gemini", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
