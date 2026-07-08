@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://alinurbegen2030-create.github.io/Project/sitemap.xml
+Sitemap: https://teamup-alinur.vercel.app/sitemap.xml

@@ -235,9 +235,24 @@ const ENABLED_OAUTH_PROVIDERS = new Set(
     .map((provider) => provider.trim().toLowerCase())
     .filter(Boolean)
 );
+const AUTH_REDIRECT_URL = import.meta.env.VITE_AUTH_REDIRECT_URL as string | undefined;
 
 function isOAuthProviderEnabled(provider: OAuthProvider) {
   return ENABLED_OAUTH_PROVIDERS.has(provider);
+}
+
+function isLocalAuthHost(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
+function getOAuthRedirectUrl() {
+  const configuredUrl = AUTH_REDIRECT_URL?.trim();
+
+  if (configuredUrl && !isLocalAuthHost(window.location.hostname)) {
+    return new URL(configuredUrl).toString();
+  }
+
+  return new URL(import.meta.env.BASE_URL, window.location.origin).toString();
 }
 
 function makeSuggestedUsername() {
@@ -431,11 +446,14 @@ export function Auth({
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).toString(),
+          redirectTo: getOAuthRedirectUrl(),
         },
       });
 
-      if (error) setMessage(friendlyAuthError(error.message, copy));
+      if (error) {
+        setMessage(friendlyAuthError(error.message, copy));
+        setBusy(false);
+      }
     } catch {
       setMessage(copy.unknownError);
       setBusy(false);
